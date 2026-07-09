@@ -19,8 +19,8 @@ class StudentController extends Controller
         $search   = $request->query('search');
         $students = Student::orderBy('name')
             ->when($search, fn($q) => $q->where(function ($q) use ($search) {
-                $q->where('name', 'ilike', "%{$search}%")
-                  ->orWhere('subject', 'ilike', "%{$search}%");
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('subject', 'like', "%{$search}%");
             }))
             ->paginate(5)
             ->withQueryString();

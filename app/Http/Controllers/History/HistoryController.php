@@ -19,9 +19,9 @@ class HistoryController extends Controller
         $search  = $request->query('search');
         $reports = Report::where('student_id', $student->id)
             ->when($search, fn($q) => $q->where(function ($q) use ($search) {
-                $q->where('materi', 'ilike', "%{$search}%")
-                  ->orWhere('behavior', 'ilike', "%{$search}%")
-                  ->orWhere('content', 'ilike', "%{$search}%");
+                $q->where('materi', 'like', "%{$search}%")
+                  ->orWhere('behavior', 'like', "%{$search}%")
+                  ->orWhere('content', 'like', "%{$search}%");
             }))
             ->orderBy('report_date', 'desc')
             ->orderBy('created_at', 'desc')
@@ -44,9 +44,9 @@ class HistoryController extends Controller
             ->orderBy('created_at', 'desc')
             ->when($student, fn($q) => $q->where('student_id', $student->id))
             ->when($search, fn($q) => $q->where(function ($q) use ($search) {
-                $q->where('student_name', 'ilike', "%{$search}%")
-                  ->orWhere('materi', 'ilike', "%{$search}%")
-                  ->orWhere('behavior', 'ilike', "%{$search}%");
+                $q->where('student_name', 'like', "%{$search}%")
+                  ->orWhere('materi', 'like', "%{$search}%")
+                  ->orWhere('behavior', 'like', "%{$search}%");
             }))
             ->paginate(5)
             ->withQueryString();
