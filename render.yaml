@@ -1,0 +1,56 @@
+services:
+  - type: web
+    name: report-studio
+    runtime: docker
+    plan: free          # change to "starter" or higher for production SLA
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+    envVars:
+      - key: APP_NAME
+        value: "Report Studio"
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: APP_KEY
+        generateValue: true     # Render auto-generates a random base64 value
+      - key: APP_URL
+        value: https://report-studio.onrender.com   # ← update after first deploy
+
+      # ── Database (Supabase) ──────────────────────────────────
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_HOST
+        sync: false             # set manually in Render dashboard
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_DATABASE
+        value: postgres
+      - key: DB_USERNAME
+        sync: false             # set manually in Render dashboard
+      - key: DB_PASSWORD
+        sync: false             # set manually in Render dashboard
+
+      # ── AI ───────────────────────────────────────────────────
+      - key: AI_PROVIDER
+        value: gemini
+      - key: AI_MODEL
+        value: gemini-2.5-flash
+      - key: AI_API_KEY
+        sync: false             # set manually in Render dashboard
+
+      # ── Sessions & Cache ─────────────────────────────────────
+      - key: SESSION_DRIVER
+        value: cookie
+      - key: SESSION_LIFETIME
+        value: "120"
+      - key: CACHE_STORE
+        value: file
+
+      # ── Misc ─────────────────────────────────────────────────
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: LOG_LEVEL
+        value: error
+      - key: QUEUE_CONNECTION
+        value: sync
