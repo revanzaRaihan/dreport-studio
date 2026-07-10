@@ -25,7 +25,15 @@ class StudentController extends Controller
             ->paginate(5)
             ->withQueryString();
 
-        return view('students.index', compact('students', 'search'));
+        // Distinct subjects for the subject combobox (includes soft-deleted rows so history is preserved)
+        $subjects = Student::withTrashed()
+            ->whereNotNull('subject')
+            ->where('subject', '!=', '')
+            ->distinct()
+            ->orderBy('subject')
+            ->pluck('subject');
+
+        return view('students.index', compact('students', 'search', 'subjects'));
     }
 
     /**

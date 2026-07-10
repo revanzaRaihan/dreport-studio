@@ -14,8 +14,8 @@
 
         <div class="form-group">
             <label for="genStudent">Murid</label>
-            <select id="genStudent">
-                <option value="">-- Pilih Murid --</option>
+            <select id="genStudent" class="no-tom-select student-picker">
+                <option value=""></option>
                 @foreach($students as $student)
                     <option value="{{ $student->id }}">{{ $student->name }} — {{ $student->subject }}</option>
                 @endforeach
@@ -30,18 +30,18 @@
             </div>
             <div>
                 <label for="genMeeting">Meeting ke-</label>
-                <input type="text" id="genMeeting" placeholder="mis. 5">
+                <input type="text" id="genMeeting" placeholder="mis. 5" autocomplete="off">
             </div>
         </div>
 
         <div class="form-group">
             <label for="genMateri">Materi</label>
-            <input type="text" id="genMateri" placeholder="mis. For Loop, penutupan array method, dst.">
+            <input type="text" id="genMateri" placeholder="mis. For Loop, penutupan array method, dst." autocomplete="off">
         </div>
 
         <div class="form-group">
             <label for="genBehavior">Behavior murid</label>
-            <textarea id="genBehavior" placeholder="mis. bisa menjelaskan kembali, agak lambat di bagian logika kondisional, aktif bertanya"></textarea>
+            <textarea id="genBehavior" placeholder="mis. bisa menjelaskan kembali, agak lambat di bagian logika kondisional, aktif bertanya" autocomplete="off"></textarea>
         </div>
 
         <button class="btn" id="btnGenerate" {{ $datasetCount === 0 ? 'disabled' : '' }}>
@@ -83,14 +83,44 @@
     const meetingNumbers = @json($meetingNumbers);
 
     const selectStudent = document.getElementById('genStudent');
-    const inputMeeting = document.getElementById('genMeeting');
-    const btnGenerate = document.getElementById('btnGenerate');
+    const inputMeeting  = document.getElementById('genMeeting');
+    const btnGenerate   = document.getElementById('btnGenerate');
     const btnRegenerate = document.getElementById('btnRegenerate');
-    const btnCopy = document.getElementById('btnCopy');
-    const btnSave = document.getElementById('btnSave');
-    const statusLine = document.getElementById('genStatus');
-    const outputCard = document.getElementById('outputCard');
-    const outputBox = document.getElementById('outputBox');
+    const btnCopy       = document.getElementById('btnCopy');
+    const btnSave       = document.getElementById('btnSave');
+    const statusLine    = document.getElementById('genStatus');
+    const outputCard    = document.getElementById('outputCard');
+    const outputBox     = document.getElementById('outputBox');
+
+    // ── Student picker — clean input-style Tom Select ────────────
+    document.addEventListener('DOMContentLoaded', () => {
+        const ts = new TomSelect(selectStudent, {
+            create: false,
+            maxItems: 1,
+            openOnFocus: true,
+            selectOnTab: true,
+            placeholder: 'Pilih murid…',
+            render: {
+                no_results: () => '<div style="padding:10px 14px;color:var(--muted);">Tidak ada murid yang cocok.</div>',
+            },
+            onChange(studentId) {
+                // Update placeholder to show selected name (item tag is hidden via CSS)
+                const opt = this.options[studentId];
+                this.control_input.placeholder = opt ? opt.text : 'Pilih murid…';
+                this.control_input.value = '';
+
+                if (studentId && meetingNumbers[studentId] !== undefined) {
+                    inputMeeting.value = meetingNumbers[studentId];
+                } else {
+                    inputMeeting.value = '';
+                }
+                selectStudent.dispatchEvent(new Event('change', { bubbles: true }));
+                this.blur();
+            }
+        });
+
+        ts.control_input.placeholder = 'Pilih murid…';
+    });
 
     // ── MCDatepicker — Material Design Date Picker ────────────
     document.addEventListener('DOMContentLoaded', () => {
@@ -176,7 +206,7 @@
     });
 
 
-    // Auto-update meeting field when student is selected
+    // Auto-update meeting field when student is selected (fallback for native change)
     selectStudent.addEventListener('change', function() {
         const studentId = this.value;
         if (studentId && meetingNumbers[studentId]) {

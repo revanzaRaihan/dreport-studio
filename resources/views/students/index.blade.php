@@ -7,16 +7,21 @@
         <h2>Tambah murid</h2>
         <p class="desc">Satu murid bisa punya satu mata pelajaran/kelas utama. Atur meeting awal jika murid sudah punya riwayat sebelumnya.</p>
         
-        <form action="{{ route('students.store') }}" method="POST">
+        <form action="{{ route('students.store') }}" method="POST" autocomplete="off">
             @csrf
             <div class="row" style="margin-bottom: 16px;">
                 <div>
                     <label for="newStudentName">Nama murid</label>
-                    <input type="text" id="newStudentName" name="name" required placeholder="mis. Renziro">
+                    <input type="text" id="newStudentName" name="name" required placeholder="mis. Renziro" autocomplete="off">
                 </div>
                 <div>
                     <label for="newStudentSubject">Mata pelajaran / kelas</label>
-                    <input type="text" id="newStudentSubject" name="subject" required placeholder="mis. Javascript Developer">
+                    <select id="newStudentSubject" name="subject" class="subject-select no-tom-select" required>
+                        <option value="">Pilih atau ketik mata pelajaran…</option>
+                        @foreach($subjects as $subj)
+                            <option value="{{ $subj }}">{{ $subj }}</option>
+                        @endforeach
+                    </select>
                 </div>
             </div>
             
@@ -41,7 +46,7 @@
 
         {{-- Search bar --}}
         <form method="GET" action="{{ route('students.index') }}" class="search-bar">
-            <input type="text" name="search" value="{{ $search ?? '' }}" placeholder="Cari nama atau mata pelajaran...">
+            <input type="text" name="search" value="{{ $search ?? '' }}" placeholder="Cari nama atau mata pelajaran..." autocomplete="off">
             <button type="submit" class="btn-icon" title="Cari">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -102,10 +107,15 @@
             @method('PUT')
             
             <label for="editName">Nama Murid</label>
-            <input type="text" id="editName" name="name" required>
+            <input type="text" id="editName" name="name" required autocomplete="off">
             
             <label for="editSubject">Mata Pelajaran / Kelas</label>
-            <input type="text" id="editSubject" name="subject" required>
+            <select id="editSubject" name="subject" class="subject-select no-tom-select" required>
+                <option value="">Pilih atau ketik mata pelajaran…</option>
+                @foreach($subjects as $subj)
+                    <option value="{{ $subj }}">{{ $subj }}</option>
+                @endforeach
+            </select>
 
             <label for="editMeetingCount">Jumlah meeting yang sudah berjalan</label>
             <input type="number" id="editMeetingCount" name="meeting_count" min="0" required>
@@ -121,17 +131,48 @@
 
 @section('scripts')
 <script>
+    // ── Subject combobox: Tom Select with create ────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.subject-select').forEach(el => {
+            const ts = new TomSelect(el, {
+                create: true,         // allow typing a brand-new subject
+                maxItems: 1,
+                openOnFocus: true,
+                placeholder: 'Pilih atau ketik mata pelajaran…',
+                createLabel: (input) => `<span>Tambah "<strong>${input}</strong>"</span>`,
+                onItemAdd() { this.blur(); },
+                render: {
+                    no_results: () => '<div class="no-results">Tidak ditemukan — ketik untuk menambah baru.</div>',
+                }
+            });
+
+            // Store reference for the edit modal
+            el._tomSelect = ts;
+        });
+    });
+
+    // ── Edit Modal ──────────────────────────────────────────────
     const editModal = document.getElementById('editModal');
-    const editForm = document.getElementById('editForm');
-    const editName = document.getElementById('editName');
-    const editSubject = document.getElementById('editSubject');
+    const editForm  = document.getElementById('editForm');
+    const editName  = document.getElementById('editName');
     const editMeetingCount = document.getElementById('editMeetingCount');
 
     function openEditModal(id, name, subject, meetingCount) {
         editName.value = name;
-        editSubject.value = subject;
         editMeetingCount.value = meetingCount;
         editForm.action = `/students/${id}`;
+
+        // Set the Tom Select value for the edit subject field
+        const editSubjectEl = document.getElementById('editSubject');
+        const ts = editSubjectEl._tomSelect || editSubjectEl.tomselect;
+        if (ts) {
+            // If the subject doesn't exist as an option yet, add it first
+            if (!ts.options[subject]) {
+                ts.addOption({ value: subject, text: subject });
+            }
+            ts.setValue(subject, true); // true = silent (no change event)
+        }
+
         editModal.classList.add('show');
     }
 

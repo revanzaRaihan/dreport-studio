@@ -76,6 +76,23 @@
         .ts-dropdown-content { padding: 4px 0; }
         .ts-wrapper .ts-control input { color: var(--ink, #1B2A41); }
         .ts-wrapper .ts-control .placeholder { color: var(--muted, #7C7568); }
+        /* When focused in single mode, hide the selected item so only the
+           search input shows — same clean "type to search" UX as subject field */
+        .ts-wrapper.single.focus .ts-control > .ts-item,
+        .ts-wrapper.single.input-active .ts-control > .ts-item {
+            display: none;
+        }
+        /* student-picker: always hide the item tag, always show the input —
+           control_input.placeholder shows the selected name instead */
+        .ts-wrapper.student-picker .ts-control .ts-item {
+            display: none !important;
+        }
+        .ts-wrapper.student-picker .ts-control input {
+            display: inline-block !important;
+            width: auto !important;
+            min-width: 4px;
+            opacity: 1 !important;
+        }
     </style>
 
     {{-- MCDatepicker — premium Material Design date picker --}}
@@ -287,13 +304,25 @@
 <script src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mc-datepicker/dist/mc-calendar.min.js"></script>
+<script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js"></script>
+<script>
+    // ── Lenis Smooth Scroll ──────────────────────────────────
+    const lenis = new Lenis();
+
+    function raf(time) {
+        lenis.raf(time);
+        requestAnimationFrame(raf);
+    }
+
+    requestAnimationFrame(raf);
+</script>
 <script>
 
     // ── Tom Select — auto-init all <select> elements ──────────
     document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('select').forEach(el => {
-            // Skip if already initialized
-            if (el.tomselect) return;
+            // Skip if already initialized or marked as native
+            if (el.tomselect || el.classList.contains('no-tom-select')) return;
 
             const ts = new TomSelect(el, {
                 create: false,
