@@ -12,6 +12,7 @@ class PendingReportService
 {
     /**
      * Synchronize and auto-calculate pending reports for all students.
+     * Optimizes performance by pre-loading collections into memory to avoid N+1 query loops.
      */
     public static function sync(): void
     {
@@ -19,19 +20,45 @@ class PendingReportService
             // Get all students with their active schedules
             $students = Student::with('schedules')->get();
 
+            if ($students->isEmpty()) {
+                return;
+            }
+
+            $studentIds = $students->pluck('id');
+
+            // Pre-fetch all reports grouped by student_id
+            $allReports = Report::whereIn('student_id', $studentIds)
+                ->get()
+                ->groupBy('student_id');
+
+            // Pre-fetch all pending reports grouped by student_id
+            $allPendingReports = PendingReport::whereIn('student_id', $studentIds)
+                ->get()
+                ->groupBy('student_id');
+
             foreach ($students as $student) {
                 if ($student->schedules->isEmpty()) {
                     continue;
                 }
 
+                // Get student's reports and pending reports collections
+                $studentReports = $allReports->get($student->id, collect());
+                $studentPending = $allPendingReports->get($student->id, collect());
+
+                // Key reports by formatted date string for O(1) in-memory lookup
+                $reportsByDate = $studentReports->keyBy(function ($r) {
+                    return Carbon::parse($r->report_date)->format('Y-m-d');
+                });
+
+                $pendingByDate = $studentPending->keyBy(function ($p) {
+                    return Carbon::parse($p->report_date)->format('Y-m-d');
+                });
+
                 foreach ($student->schedules as $schedule) {
                     $scheduleDay = (int) $schedule->day_of_week;
 
-                    // Get the student's last saved report
-                    $lastReport = Report::where('student_id', $student->id)
-                        ->orderBy('report_date', 'desc')
-                        ->orderBy('created_at', 'desc')
-                        ->first();
+                    // Get the student's last saved report in memory
+                    $lastReport = $studentReports->sortByDesc('report_date')->first();
 
                     if ($lastReport) {
                         $lastDate = Carbon::parse($lastReport->report_date);
@@ -68,22 +95,19 @@ class PendingReportService
                     while ($nextDate->lte(Carbon::today())) {
                         $dateStr = $nextDate->format('Y-m-d');
 
-                        // Check if report already exists for this date
-                        $reportExists = Report::where('student_id', $student->id)
-                            ->whereDate('report_date', $dateStr)
-                            ->exists();
-
-                        // Check if pending report already exists for this date
-                        $pendingExists = PendingReport::where('student_id', $student->id)
-                            ->whereDate('report_date', $dateStr)
-                            ->exists();
+                        // Check in-memory lists
+                        $reportExists = $reportsByDate->has($dateStr);
+                        $pendingExists = $pendingByDate->has($dateStr);
 
                         if (!$reportExists && !$pendingExists) {
-                            PendingReport::create([
+                            $newPending = PendingReport::create([
                                 'student_id' => $student->id,
                                 'meeting_number' => $nextMeetingNumber,
                                 'report_date' => $dateStr,
                             ]);
+
+                            // Cache the newly created pending report to prevent double creation on other schedules of same student
+                            $pendingByDate->put($dateStr, $newPending);
                         }
 
                         // Advance by 7 days
