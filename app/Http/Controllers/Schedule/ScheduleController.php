@@ -34,7 +34,6 @@ class ScheduleController extends Controller
             4 => 'Kamis',
             5 => 'Jumat',
             6 => 'Sabtu',
-            7 => 'Minggu',
         ];
 
         // Distinct subjects for filtering
@@ -53,7 +52,7 @@ class ScheduleController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'day_of_week' => ['required', 'integer', 'between:1,7'],
+            'day_of_week' => ['required', 'integer', 'between:1,6'],
             'start_time' => ['required', 'date_format:H:i'],
             'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
             'label' => ['nullable', 'string', 'max:100'],
@@ -86,7 +85,7 @@ class ScheduleController extends Controller
     public function update(Request $request, Schedule $schedule): RedirectResponse
     {
         $validated = $request->validate([
-            'day_of_week' => ['required', 'integer', 'between:1,7'],
+            'day_of_week' => ['required', 'integer', 'between:1,6'],
             'start_time' => ['required', 'date_format:H:i'],
             'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
             'label' => ['nullable', 'string', 'max:100'],
