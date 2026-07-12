@@ -45,7 +45,7 @@
             <div class="row" style="margin-bottom: 16px;">
                 <div style="flex: 1;">
                     <label for="newDayOfWeek" style="font-weight: 600;">Hari</label>
-                    <select id="newDayOfWeek" name="day_of_week" required>
+                    <select id="newDayOfWeek" class="no-tom-select" name="day_of_week" required style="margin: 0; background: #FCFAF6; border: 1.5px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 14px; font-family: inherit; color: var(--ink); cursor: pointer; height: 42px; box-sizing: border-box; width: 100%;">
                         <option value="">Pilih Hari...</option>
                         @foreach($days as $num => $name)
                             <option value="{{ $num }}">{{ $name }}</option>
@@ -72,7 +72,7 @@
                     <label style="font-weight: 600;">Pencarian &amp; Filter Murid</label>
                     <div style="display: flex; gap: 8px;">
                         <input type="text" id="studentSearch" placeholder="Cari nama murid..." autocomplete="off" style="margin: 0; flex: 1; height: 42px; box-sizing: border-box;">
-                        <select id="subjectFilter" style="margin: 0; flex: 0 0 160px; background: #FCFAF6; border: 1.5px solid var(--line, #E4DCCE); border-radius: 8px; padding: 10px 12px; font-size: 13.5px; font-family: inherit; color: var(--ink, #1B2A41); cursor: pointer; height: 42px; box-sizing: border-box;">
+                        <select id="subjectFilter" class="no-tom-select" style="margin: 0; flex: 0 0 160px; background: #FCFAF6; border: 1.5px solid var(--line, #E4DCCE); border-radius: 8px; padding: 10px 12px; font-size: 13.5px; font-family: inherit; color: var(--ink, #1B2A41); cursor: pointer; height: 42px; box-sizing: border-box;">
                             <option value="">Semua Mapel</option>
                             @foreach($subjects as $subj)
                                 <option value="{{ $subj }}">{{ $subj }}</option>
@@ -197,7 +197,7 @@
             <div class="row" style="margin-bottom: 14px;">
                 <div>
                     <label for="editDayOfWeek">Hari</label>
-                    <select id="editDayOfWeek" name="day_of_week" required>
+                    <select id="editDayOfWeek" class="no-tom-select" name="day_of_week" required style="margin: 0; background: #FCFAF6; border: 1.5px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 14px; font-family: inherit; color: var(--ink); cursor: pointer; height: 42px; box-sizing: border-box; width: 100%;">
                         @foreach($days as $num => $name)
                             <option value="{{ $num }}">{{ $name }}</option>
                         @endforeach
@@ -225,7 +225,7 @@
                     <label>Pencarian &amp; Filter Murid</label>
                     <div style="display: flex; gap: 8px;">
                         <input type="text" id="editStudentSearch" placeholder="Cari nama murid..." autocomplete="off" style="margin: 0; flex: 1; height: 42px; box-sizing: border-box;">
-                        <select id="editSubjectFilter" style="margin: 0; flex: 0 0 160px; background: #FCFAF6; border: 1.5px solid var(--line, #E4DCCE); border-radius: 8px; padding: 10px 12px; font-size: 13.5px; font-family: inherit; color: var(--ink, #1B2A41); cursor: pointer; height: 42px; box-sizing: border-box;">
+                        <select id="editSubjectFilter" class="no-tom-select" style="margin: 0; flex: 0 0 160px; background: #FCFAF6; border: 1.5px solid var(--line, #E4DCCE); border-radius: 8px; padding: 10px 12px; font-size: 13.5px; font-family: inherit; color: var(--ink, #1B2A41); cursor: pointer; height: 42px; box-sizing: border-box;">
                             <option value="">Semua Mapel</option>
                             @foreach($subjects as $subj)
                                 <option value="{{ $subj }}">{{ $subj }}</option>
