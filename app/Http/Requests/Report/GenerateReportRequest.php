@@ -19,6 +19,7 @@ class GenerateReportRequest extends FormRequest
             'meeting_number' => ['required', 'integer', 'min:1'],
             'materi' => ['required', 'string'],
             'behavior' => ['required', 'string'],
+            'language' => ['nullable', 'string', 'in:id,en'],
         ];
     }
 }

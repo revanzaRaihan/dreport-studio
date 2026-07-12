@@ -63,12 +63,14 @@ class ReportController extends Controller
         set_time_limit(120);
 
         $validated = $request->validated();
+        $language = $validated['language'] ?? 'id';
         
-        // Verify we have at least one dataset entry
-        if (DatasetEntry::count() === 0) {
+        // Verify we have at least one dataset entry for the selected language
+        if (DatasetEntry::where('language', $language)->count() === 0) {
+            $langName = $language === 'en' ? 'Bahasa Inggris' : 'Bahasa Indonesia';
             return response()->json([
                 'success' => false,
-                'message' => 'Silakan tambah minimal 1 contoh di tab Dataset Gaya biar AI tahu gaya nulis kamu.'
+                'message' => "Silakan tambah minimal 1 contoh di tab Dataset Gaya untuk {$langName} biar AI tahu gaya nulis kamu."
             ], 422);
         }
 
@@ -81,7 +83,8 @@ class ReportController extends Controller
                 $validated['meeting_number'],
                 $validated['report_date'],
                 $validated['materi'],
-                $validated['behavior']
+                $validated['behavior'],
+                $language
             );
 
             // Call AI

@@ -12,5 +12,6 @@ class DatasetEntry extends Model
 
     protected $fillable = [
         'body',
+        'language',
     ];
 }

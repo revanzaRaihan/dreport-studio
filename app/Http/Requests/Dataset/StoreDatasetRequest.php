@@ -15,6 +15,7 @@ class StoreDatasetRequest extends FormRequest
     {
         return [
             'body' => ['required', 'string'],
+            'language' => ['required', 'string', 'in:id,en'],
         ];
     }
 }

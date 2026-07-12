@@ -116,12 +116,14 @@ class ReportStudioTest extends TestCase
 
         // 1. Create Entry
         $response = $this->post('/dataset', [
-            'body' => '03/07/2026 Javascript Developer Meeting 9: Renziro belajar loop.'
+            'body' => '03/07/2026 Javascript Developer Meeting 9: Renziro belajar loop.',
+            'language' => 'id'
         ]);
 
         $response->assertRedirect('/dataset');
         $this->assertDatabaseHas('dataset_entries', [
-            'body' => '03/07/2026 Javascript Developer Meeting 9: Renziro belajar loop.'
+            'body' => '03/07/2026 Javascript Developer Meeting 9: Renziro belajar loop.',
+            'language' => 'id'
         ]);
 
         $entry = DatasetEntry::first();
@@ -569,5 +571,69 @@ class ReportStudioTest extends TestCase
         $this->assertEquals('llama3-8b-8192', AppSetting::getValue('ai_model'));
         $this->assertEquals('new-secret-api-key', AppSetting::getValue('ai_api_key'));
         $this->assertEquals('628123456789', AppSetting::getValue('admin_wa_number'));
+    }
+
+    /**
+     * Test adding dataset entries with a specified language.
+     */
+    public function test_dataset_can_be_stored_with_language(): void
+    {
+        $this->actingAs($this->user);
+
+        // Store Indonesian dataset
+        $responseId = $this->post('/dataset', [
+            'body' => 'Laporan bahasa indonesia',
+            'language' => 'id'
+        ]);
+        $responseId->assertRedirect('/dataset');
+        $this->assertDatabaseHas('dataset_entries', [
+            'body' => 'Laporan bahasa indonesia',
+            'language' => 'id'
+        ]);
+
+        // Store English dataset
+        $responseEn = $this->post('/dataset', [
+            'body' => 'Report in english',
+            'language' => 'en'
+        ]);
+        $responseEn->assertRedirect('/dataset');
+        $this->assertDatabaseHas('dataset_entries', [
+            'body' => 'Report in english',
+            'language' => 'en'
+        ]);
+    }
+
+    /**
+     * Test report generation validation checks language datasets.
+     */
+    public function test_report_generation_requires_matching_language_dataset(): void
+    {
+        $this->actingAs($this->user);
+
+        $student = Student::create([
+            'name' => 'Azzam Lang Test',
+            'subject' => 'Fisika',
+            'meeting_count' => 0
+        ]);
+
+        // Scenario A: Requesting 'en' report without English dataset
+        DatasetEntry::create([
+            'body' => 'Contoh Indonesia saja',
+            'language' => 'id'
+        ]);
+
+        $response = $this->postJson('/reports/generate', [
+            'student_id' => $student->id,
+            'report_date' => '2026-07-12',
+            'meeting_number' => 1,
+            'materi' => 'Newton Laws',
+            'behavior' => 'good',
+            'language' => 'en'
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonFragment([
+            'message' => 'Silakan tambah minimal 1 contoh di tab Dataset Gaya untuk Bahasa Inggris biar AI tahu gaya nulis kamu.'
+        ]);
     }
 }

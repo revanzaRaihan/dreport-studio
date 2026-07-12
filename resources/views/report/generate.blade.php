@@ -33,14 +33,21 @@
         </div>
 
         <div class="row">
-            <div id="datepickerWrapper" style="position: relative;">
+            <div id="datepickerWrapper" style="position: relative; flex: 1;">
                 <label for="genDateDisplay">Tanggal</label>
                 <input type="text" id="genDateDisplay" readonly style="cursor: pointer; background: #FCFAF6;" placeholder="Pilih Tanggal...">
                 <input type="hidden" id="genDate" value="{{ date('Y-m-d') }}">
             </div>
-            <div>
+            <div style="flex: 1;">
                 <label for="genMeeting">Meeting ke-</label>
                 <input type="text" id="genMeeting" placeholder="mis. 5" autocomplete="off">
+            </div>
+            <div style="flex: 1;">
+                <label for="genLanguage">Bahasa Laporan</label>
+                <select id="genLanguage" class="no-tom-select" style="background: #FCFAF6; border: 1.5px solid var(--line, #E4DCCE); border-radius: 8px; padding: 10px 12px; font-size: 14px; font-family: inherit; color: var(--ink, #1B2A41); cursor: pointer; width: 100%; box-sizing: border-box; height: 42px; margin: 0;">
+                    <option value="id" selected>Bahasa Indonesia</option>
+                    <option value="en">English (Inggris)</option>
+                </select>
             </div>
         </div>
 
@@ -366,7 +373,8 @@
                     report_date: reportDate,
                     meeting_number: meetingNumber,
                     materi: materi,
-                    behavior: behavior
+                    behavior: behavior,
+                    language: document.getElementById('genLanguage').value
                 })
             });
 

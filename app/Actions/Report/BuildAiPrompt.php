@@ -11,10 +11,10 @@ class BuildAiPrompt
     /**
      * Build the prompt string for the AI model using few-shot training.
      */
-    public function execute(Student $student, string $meetingNo, string $dateVal, string $materi, string $behavior): string
+    public function execute(Student $student, string $meetingNo, string $dateVal, string $materi, string $behavior, string $language = 'id'): string
     {
-        // Load the last 12 dataset entries for few-shot examples
-        $entries = DatasetEntry::latest()->take(12)->get()->reverse();
+        // Load the last 12 dataset entries for few-shot examples of specified language
+        $entries = DatasetEntry::where('language', $language)->latest()->take(12)->get()->reverse();
 
         $examples = '';
         $index = 1;
@@ -25,6 +25,28 @@ class BuildAiPrompt
 
         // Format date to DD/MM/YYYY
         $formattedDate = Carbon::parse($dateVal)->format('d/m/Y');
+
+        if ($language === 'en') {
+            return "You are helping a private tutor write a daily student progress report in English, to be sent to parents via WhatsApp.
+
+Your task: write ONE paragraph of a new report, matching the writing style, sentence structure, diction, and tone of the teacher's original reports below as closely as possible. Pay attention to how the teacher starts the report, explains the meeting/materi, and closes the paragraph.
+
+=== TEACHER'S ORIGINAL REPORTS (STYLE REFERENCE) ===
+{$examples}=== END OF EXAMPLES ===
+
+Now write a new report using the following data:
+- Date: {$formattedDate}
+- Subject / class: {$student->subject}
+- Meeting number: {$meetingNo}
+- Student name: {$student->name}
+- Lesson material today: {$materi}
+- Student behavior/observation today: {$behavior}
+
+Output rules:
+- Write ONLY the report paragraph itself, no titles, no explanations, no quotation marks.
+- Follow the same opening format as the examples.
+- Do not make up technical details outside the provided material and behavior.";
+        }
 
         return "Kamu membantu seorang guru les privat menulis laporan progres harian murid, dalam Bahasa Indonesia, untuk dikirim ke orang tua lewat WhatsApp.
 

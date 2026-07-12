@@ -24,8 +24,10 @@ class DatasetController extends Controller
      */
     public function store(StoreDatasetRequest $request): RedirectResponse
     {
+        $validated = $request->validated();
         DatasetEntry::create([
-            'body' => $request->validated()['body']
+            'body' => $validated['body'],
+            'language' => $validated['language']
         ]);
 
         return redirect()->route('dataset.index')
