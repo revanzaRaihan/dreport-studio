@@ -5,27 +5,28 @@
 
 @section('styles')
 <style>
-    /* Responsive grid styling for 6-day schedule board */
-    .schedule-grid {
-        display: grid;
-        grid-template-columns: repeat(6, 1fr);
-        gap: 12px;
+    /* Premium Row-Based Schedule Styling */
+    .schedule-rows {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
         margin-top: 20px;
     }
-    @media (max-width: 1200px) {
-        .schedule-grid {
-            grid-template-columns: repeat(3, 1fr);
-        }
+    .day-row {
+        background: #FDFCF8;
+        border: 1.5px solid var(--line, #E4DCCE);
+        border-radius: 10px;
+        padding: 16px;
+        transition: all 0.2s ease;
     }
-    @media (max-width: 768px) {
-        .schedule-grid {
-            grid-template-columns: repeat(2, 1fr);
-        }
+    .day-row:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
     }
-    @media (max-width: 480px) {
-        .schedule-grid {
-            grid-template-columns: 1fr;
-        }
+    .sessions-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 12px;
+        margin-top: 10px;
     }
 </style>
 @endsection
@@ -107,52 +108,57 @@
         <h2>Papan Jadwal Sesi Les Mingguan</h2>
         <p class="desc">Daftar sesi belajar mingguan Senin - Sabtu yang berjalan saat ini (Minggu kantor tutup).</p>
 
-        <div class="schedule-grid">
+        <div class="schedule-rows">
             @foreach($days as $dayNum => $dayName)
-                <div class="day-column" style="background: #FDFCF8; border: 1.5px solid var(--line); border-radius: 8px; padding: 10px; min-height: 250px; display: flex; flex-direction: column;">
-                    <h3 style="font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 700; border-bottom: 1.5px solid var(--line); padding-bottom: 6px; margin: 0 0 10px; text-align: center; color: var(--ink);">
-                        {{ $dayName }}
-                    </h3>
-                    
-                    @php
-                        $daySchedules = $schedules->where('day_of_week', $dayNum);
-                    @endphp
+                @php
+                    $daySchedules = $schedules->where('day_of_week', $dayNum);
+                @endphp
+                <div class="day-row">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--line); padding-bottom: 8px; margin-bottom: 8px;">
+                        <h3 style="font-family: 'Space Grotesk', sans-serif; font-size: 14.5px; font-weight: 700; color: var(--ink); margin: 0;">
+                            {{ $dayName }}
+                        </h3>
+                        <span style="font-size: 11.5px; color: var(--muted); font-weight: 600;">
+                            {{ $daySchedules->count() }} Sesi Terjadwal
+                        </span>
+                    </div>
                     
                     @if($daySchedules->isEmpty())
-                        <div style="font-size: 11.5px; color: var(--muted); text-align: center; margin: auto 0; padding: 10px 0;">Tidak ada sesi</div>
+                        <div style="font-size: 12px; color: var(--muted); padding: 8px 0; font-style: italic;">Tidak ada sesi belajar terjadwal.</div>
                     @else
-                        <div style="display: flex; flex-direction: column; gap: 10px; flex-grow: 1;">
+                        <div class="sessions-grid">
                             @foreach($daySchedules as $sched)
-                                <div class="schedule-card" style="background: #FFFFFF; border: 1px solid var(--line); border-left: 4px solid var(--teal); border-radius: 6px; padding: 10px; font-size: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: space-between; min-height: 100px;">
+                                <div class="schedule-card" style="background: #FFFFFF; border: 1px solid var(--line); border-left: 4px solid var(--teal); border-radius: 8px; padding: 14px; font-size: 12.5px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: space-between; min-height: 110px;">
                                     <div>
-                                        <div style="font-weight: 700; color: var(--teal); margin-bottom: 2px;">
-                                            {{ substr($sched->start_time, 0, 5) }} - {{ substr($sched->end_time, 0, 5) }}
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                            <span style="font-weight: 700; color: var(--teal); font-size: 13px;">
+                                                {{ substr($sched->start_time, 0, 5) }} - {{ substr($sched->end_time, 0, 5) }}
+                                            </span>
+                                            @if($sched->label)
+                                                <span style="font-size: 9.5px; font-weight: 700; color: var(--muted); text-transform: uppercase; background: #FAF9F6; border: 1px solid var(--line); padding: 2px 8px; border-radius: 4px;">
+                                                    {{ $sched->label }}
+                                                </span>
+                                            @endif
                                         </div>
                                         
-                                        @if($sched->label)
-                                            <div style="font-size: 10px; font-weight: 600; color: var(--muted); margin-bottom: 6px; text-transform: uppercase;">
-                                                {{ $sched->label }}
-                                            </div>
-                                        @endif
-                                        
-                                        <div style="margin-bottom: 6px;">
+                                        <div style="margin-bottom: 8px;">
                                             @if($sched->students->isEmpty())
-                                                <span style="color: var(--red); font-style: italic; font-size: 10.5px;">Belum ada murid</span>
+                                                <span style="color: var(--red); font-style: italic; font-size: 11.5px;">Belum ada murid</span>
                                             @else
-                                                <ul style="margin: 0; padding-left: 14px; font-size: 10.5px; color: var(--ink); line-height: 1.4;">
+                                                <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;">
                                                     @foreach($sched->students as $std)
-                                                        <li>
-                                                            <strong>{{ $std->name }}</strong>
-                                                            <span style="color: var(--muted); font-size: 9.5px;">({{ $std->subject }})</span>
-                                                        </li>
+                                                        <span style="font-size: 11px; background: #FCFAF6; border: 1px solid var(--line); padding: 3px 8px; border-radius: 4px; color: var(--ink); font-weight: 600; display: inline-flex; align-items: center;">
+                                                            {{ $std->name }}
+                                                            <span style="font-weight: normal; color: var(--muted); font-size: 9.5px; margin-left: 4px;">({{ $std->subject }})</span>
+                                                        </span>
                                                     @endforeach
-                                                </ul>
+                                                </div>
                                             @endif
                                         </div>
                                     </div>
 
-                                    <div style="display: flex; gap: 4px; justify-content: flex-end; border-top: 1px solid color-mix(in srgb, var(--line) 40%, transparent); padding-top: 6px; margin-top: 6px;">
-                                        <button class="btn secondary btn-edit-sched" style="padding: 2px 6px; font-size: 10px;"
+                                    <div style="display: flex; gap: 6px; justify-content: flex-end; border-top: 1px solid color-mix(in srgb, var(--line) 40%, transparent); padding-top: 8px; margin-top: 8px;">
+                                        <button class="btn secondary btn-edit-sched" style="padding: 4px 8px; font-size: 11px;"
                                                 data-id="{{ $sched->id }}"
                                                 data-day="{{ $sched->day_of_week }}"
                                                 data-start="{{ substr($sched->start_time, 0, 5) }}"
@@ -165,7 +171,7 @@
                                         <form action="{{ route('schedule.destroy', $sched->id) }}" method="POST" onsubmit="return confirm('Hapus jadwal sesi ini?')" style="margin:0;">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn danger" style="padding: 2px 6px; font-size: 10px;">Hapus</button>
+                                            <button type="submit" class="btn danger" style="padding: 4px 8px; font-size: 11px;">Hapus</button>
                                         </form>
                                     </div>
                                 </div>
