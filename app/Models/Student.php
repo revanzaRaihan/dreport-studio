@@ -15,10 +15,26 @@ class Student extends Model
         'name',
         'subject',
         'meeting_count',
+        'first_meeting_date',
+    ];
+
+    protected $casts = [
+        'first_meeting_date' => 'date',
     ];
 
     public function reports()
     {
         return $this->hasMany(Report::class);
+    }
+
+    public function pendingReports()
+    {
+        return $this->hasMany(PendingReport::class);
+    }
+
+    public function schedules()
+    {
+        return $this->belongsToMany(Schedule::class, 'schedule_student')
+                    ->withTimestamps();
     }
 }

@@ -1,5 +1,8 @@
 @extends('layouts.app')
 
+@section('page_title', 'Buat Laporan Baru')
+@section('page_description', 'Generate draf laporan belajar murid secara otomatis menggunakan AI.')
+
 @section('content')
 <section class="panel active" id="tab-buat">
     @if($datasetCount === 0)
@@ -19,6 +22,13 @@
                 @foreach($students as $student)
                     <option value="{{ $student->id }}">{{ $student->name }} — {{ $student->subject }}</option>
                 @endforeach
+            </select>
+        </div>
+
+        <div class="form-group" id="pendingReportWrapper" style="display: none; margin-top: 14px; margin-bottom: 14px;">
+            <label for="genPendingReport" style="color: var(--teal, #2F8F7E); font-weight: 600;">Listing Daily Report (Belum Dibuat)</label>
+            <select id="genPendingReport" class="no-tom-select" style="background: #FCFAF6; border: 1.5px solid var(--line, #E4DCCE); border-radius: 8px; padding: 10px 12px; font-size: 14px; font-family: inherit; color: var(--ink, #1B2A41); cursor: pointer; width: 100%;">
+                <!-- Will be dynamically populated via JS -->
             </select>
         </div>
 
@@ -42,6 +52,12 @@
         <div class="form-group">
             <label for="genBehavior">Behavior murid</label>
             <textarea id="genBehavior" placeholder="mis. bisa menjelaskan kembali, agak lambat di bagian logika kondisional, aktif bertanya" autocomplete="off"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="reportImage">Foto Pertemuan (Opsional)</label>
+            <input type="file" id="reportImage" accept="image/*" class="no-tom-select" style="background: #FCFAF6; border: 1.5px solid var(--line, #E4DCCE); border-radius: 8px; padding: 10px 12px; font-size: 14px; font-family: inherit; color: var(--ink, #1B2A41); cursor: pointer; width: 100%;">
+            <p class="desc" style="margin-top: 4px; font-size: 11.5px;">Foto dokumentasi akan disimpan di Supabase Storage / lokal dan ditampilkan di riwayat.</p>
         </div>
 
         <button class="btn" id="btnGenerate" {{ $datasetCount === 0 ? 'disabled' : '' }}>
@@ -74,6 +90,7 @@
     <input type="hidden" name="materi" id="saveMateri">
     <input type="hidden" name="behavior" id="saveBehavior">
     <input type="hidden" name="content" id="saveContent">
+    <input type="hidden" name="pending_report_id" id="savePendingReportId">
 </form>
 @endsection
 
@@ -81,6 +98,11 @@
 <script>
     // Meeting numbers mapping (from PHP to JS)
     const meetingNumbers = @json($meetingNumbers);
+    // Pending reports mapping (from PHP to JS)
+    const pendingReports = @json($pendingReports);
+
+    let pickerInstance; // Global reference for the MCDatepicker
+    let selectedPendingReportId = null;
 
     const selectStudent = document.getElementById('genStudent');
     const inputMeeting  = document.getElementById('genMeeting');
@@ -128,7 +150,7 @@
         const displayInput = document.getElementById('genDateDisplay');
         const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
-        const picker = MCDatepicker.create({
+        pickerInstance = MCDatepicker.create({
             el: '#genDateDisplay', // bind to input field
             bodyType: 'inline', // render inline
             context: wrapper, // render inside relative wrapper context
@@ -142,6 +164,7 @@
             customClearBTN: 'HAPUS',
             autoClose: true
         });
+        const picker = pickerInstance;
 
         // Position and toggle the calendar as a fixed-position dropdown under the input
         const showCalendar = () => {
@@ -206,13 +229,100 @@
     });
 
 
+    const pendingReportWrapper = document.getElementById('pendingReportWrapper');
+    const selectPending = document.getElementById('genPendingReport');
+
+    function formatDateIndo(dateStr) {
+        if (!dateStr) return '';
+        const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+        const parts = dateStr.split('-');
+        const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
+        return `${dateObj.getDate()} ${months[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+    }
+
+    function setDateValue(dateStr) {
+        const displayInput = document.getElementById('genDateDisplay');
+        const hiddenDateInput = document.getElementById('genDate');
+        if (!displayInput || !hiddenDateInput) return;
+        
+        displayInput.value = formatDateIndo(dateStr);
+        hiddenDateInput.value = dateStr;
+
+        if (pickerInstance && dateStr) {
+            const parts = dateStr.split('-');
+            const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
+            pickerInstance.setDate(dateObj);
+        }
+    }
+
+    function getTodayStr() {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+    }
+
     // Auto-update meeting field when student is selected (fallback for native change)
     selectStudent.addEventListener('change', function() {
         const studentId = this.value;
-        if (studentId && meetingNumbers[studentId]) {
-            inputMeeting.value = meetingNumbers[studentId];
+        selectedPendingReportId = null; // reset selected pending report ID
+
+        if (studentId && pendingReports[studentId] && pendingReports[studentId].length > 0) {
+            // Show pending report section
+            pendingReportWrapper.style.display = 'block';
+            selectPending.innerHTML = '';
+
+            // Add "Buat Baru" option
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = 'new';
+            defaultOpt.textContent = `Buat Baru (Pertemuan ke-${meetingNumbers[studentId] || 1})`;
+            selectPending.appendChild(defaultOpt);
+
+            // Add pending reports options
+            pendingReports[studentId].forEach(report => {
+                const opt = document.createElement('option');
+                opt.value = report.id;
+                opt.dataset.meeting = report.meeting_number;
+                opt.dataset.date = report.report_date;
+                opt.textContent = `Pertemuan Ke-${report.meeting_number} (${formatDateIndo(report.report_date)})`;
+                selectPending.appendChild(opt);
+            });
+
+            // Set to next meeting count by default
+            inputMeeting.value = meetingNumbers[studentId] || '';
+            setDateValue(getTodayStr());
         } else {
-            inputMeeting.value = '';
+            // Hide pending reports
+            pendingReportWrapper.style.display = 'none';
+            selectPending.innerHTML = '';
+            
+            if (studentId && meetingNumbers[studentId] !== undefined) {
+                inputMeeting.value = meetingNumbers[studentId];
+            } else {
+                inputMeeting.value = '';
+            }
+            setDateValue(getTodayStr());
+        }
+    });
+
+    // Handle change of pending report selection
+    selectPending.addEventListener('change', function() {
+        const val = this.value;
+        const studentId = selectStudent.value;
+
+        if (val === 'new' || !val) {
+            selectedPendingReportId = null;
+            inputMeeting.value = meetingNumbers[studentId] || '';
+            setDateValue(getTodayStr());
+        } else {
+            selectedPendingReportId = val;
+            const selectedOpt = this.options[this.selectedIndex];
+            const meetingNum = selectedOpt.dataset.meeting;
+            const reportDate = selectedOpt.dataset.date;
+            
+            inputMeeting.value = meetingNum;
+            setDateValue(reportDate);
         }
     });
 
@@ -275,6 +385,7 @@
             outputBox.dataset.reportDate = data.report_date;
             outputBox.dataset.materi = data.materi;
             outputBox.dataset.behavior = data.behavior;
+            outputBox.dataset.pendingReportId = selectedPendingReportId || '';
 
             // Show card
             outputCard.style.display = 'block';
@@ -319,6 +430,8 @@
             return;
         }
 
+        const form = document.getElementById('saveReportForm');
+
         // Map values to hidden form inputs
         document.getElementById('saveStudentId').value = outputBox.dataset.studentId;
         document.getElementById('saveMeetingNumber').value = outputBox.dataset.meetingNumber;
@@ -326,9 +439,18 @@
         document.getElementById('saveMateri').value = outputBox.dataset.materi;
         document.getElementById('saveBehavior').value = outputBox.dataset.behavior;
         document.getElementById('saveContent').value = text;
+        document.getElementById('savePendingReportId').value = outputBox.dataset.pendingReportId || '';
+
+        // Attach image if uploaded
+        const imageInput = document.getElementById('reportImage');
+        if (imageInput && imageInput.files.length > 0) {
+            form.enctype = 'multipart/form-data';
+            imageInput.name = 'image';
+            form.appendChild(imageInput);
+        }
 
         // Submit the form
-        document.getElementById('saveReportForm').submit();
+        form.submit();
     });
 </script>
 @endsection

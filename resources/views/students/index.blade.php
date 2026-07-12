@@ -1,5 +1,8 @@
 @extends('layouts.app')
 
+@section('page_title', 'Manajemen Murid')
+@section('page_description', 'Kelola data murid, mata pelajaran, dan parameter awal pembelajaran.')
+
 @section('content')
 <section class="panel active" id="tab-murid">
     <!-- Tambah Murid Card -->
@@ -25,14 +28,18 @@
                 </div>
             </div>
             
-            <div style="margin-bottom: 20px; background: #FCFAF6; border: 1px dashed var(--line); padding: 16px; border-radius: 8px; display: flex; align-items: center; gap: 20px; max-width: 620px;">
+            <div style="margin-bottom: 20px; background: #FCFAF6; border: 1px dashed var(--line); padding: 16px; border-radius: 8px; display: flex; align-items: center; gap: 20px; max-width: 620px; flex-wrap: wrap;">
                 <div style="flex-shrink: 0; width: 110px;">
                     <label for="newStudentMeeting" style="margin-bottom: 6px; display: block;">Meeting awal</label>
                     <input type="number" id="newStudentMeeting" name="meeting_count" min="0" value="0" style="margin: 0; text-align: center; font-weight: 600; width: 100%;">
                 </div>
-                <div style="font-size: 12.5px; color: var(--muted); line-height: 1.5; flex-grow: 1;">
-                    <strong style="color: var(--ink);">Kustomisasi nomor urutan meeting:</strong><br>
-                    Isi jika murid ini sudah melakukan beberapa meeting sebelumnya. Laporan baru berikutnya akan otomatis dimulai dari meeting ke-<strong>(nilai ini + 1)</strong>.
+                <div style="flex-shrink: 0; width: 180px;">
+                    <label for="newStudentFirstMeeting" style="margin-bottom: 6px; display: block;">Pertemuan pertama</label>
+                    <input type="date" id="newStudentFirstMeeting" name="first_meeting_date" style="margin: 0; font-weight: 600; width: 100%;">
+                </div>
+                <div style="font-size: 12.5px; color: var(--muted); line-height: 1.5; flex-grow: 1; min-width: 200px;">
+                    <strong style="color: var(--ink);">Parameter Awal Murid:</strong><br>
+                    Isi jika murid ini sudah melakukan beberapa meeting sebelumnya atau memiliki tanggal mulai belajar yang pasti untuk otomatisasi jadwal.
                 </div>
             </div>
             
@@ -74,12 +81,17 @@
                 <div class="list-item">
                     <div class="meta">
                         <strong>{{ $student->name }}</strong>
-                        <span>{{ $student->subject }} · sudah {{ $student->meeting_count }} meeting</span>
+                        <span>
+                            {{ $student->subject }} · sudah {{ $student->meeting_count }} meeting
+                            @if($student->first_meeting_date)
+                                · mulai {{ $student->first_meeting_date->format('d M Y') }}
+                            @endif
+                        </span>
                     </div>
                     <div style="display: flex; gap: 6px; align-items: center; flex-shrink: 0;">
                         <span class="badge">M{{ $student->meeting_count + 1 }} berikutnya</span>
                         <a href="{{ route('history.student', $student->id) }}" class="btn secondary" style="padding: 6px 10px; font-size: 12px; text-decoration: none;">Riwayat</a>
-                        <button class="btn secondary" style="padding: 6px 10px;" onclick="openEditModal('{{ $student->id }}', '{{ addslashes($student->name) }}', '{{ addslashes($student->subject) }}', {{ $student->meeting_count }})">Edit</button>
+                        <button class="btn secondary" style="padding: 6px 10px;" onclick="openEditModal('{{ $student->id }}', '{{ addslashes($student->name) }}', '{{ addslashes($student->subject) }}', {{ $student->meeting_count }}, '{{ $student->first_meeting_date ? $student->first_meeting_date->format('Y-m-d') : '' }}')">Edit</button>
                         
                         <form action="{{ route('students.destroy', $student->id) }}" method="POST" onsubmit="return confirm('Hapus murid ini? Riwayat laporannya tetap tersimpan.')" style="margin:0;">
                             @csrf
@@ -120,6 +132,9 @@
             <label for="editMeetingCount">Jumlah meeting yang sudah berjalan</label>
             <input type="number" id="editMeetingCount" name="meeting_count" min="0" required>
             
+            <label for="editFirstMeetingDate">Tanggal pertemuan pertama (Opsional)</label>
+            <input type="date" id="editFirstMeetingDate" name="first_meeting_date">
+
             <div class="actions-row" style="justify-content: flex-end; margin-top: 20px;">
                 <button type="button" class="btn secondary" onclick="closeEditModal()">Batal</button>
                 <button type="submit" class="btn">Simpan</button>
@@ -156,10 +171,14 @@
     const editForm  = document.getElementById('editForm');
     const editName  = document.getElementById('editName');
     const editMeetingCount = document.getElementById('editMeetingCount');
+    const editFirstMeetingDate = document.getElementById('editFirstMeetingDate');
 
-    function openEditModal(id, name, subject, meetingCount) {
+    function openEditModal(id, name, subject, meetingCount, firstMeetingDate) {
         editName.value = name;
         editMeetingCount.value = meetingCount;
+        if (editFirstMeetingDate) {
+            editFirstMeetingDate.value = firstMeetingDate || '';
+        }
         editForm.action = `/students/${id}`;
 
         // Set the Tom Select value for the edit subject field

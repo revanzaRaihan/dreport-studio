@@ -86,14 +86,16 @@ class ReportStudioTest extends TestCase
         // 2. Update Student
         $response = $this->put("/students/{$student->id}", [
             'name' => 'Renziro Updated',
-            'subject' => 'Laravel Developer'
+            'subject' => 'Laravel Developer',
+            'meeting_count' => 0
         ]);
 
         $response->assertRedirect('/students');
         $this->assertDatabaseHas('students', [
             'id' => $student->id,
             'name' => 'Renziro Updated',
-            'subject' => 'Laravel Developer'
+            'subject' => 'Laravel Developer',
+            'meeting_count' => 0
         ]);
 
         // 3. Soft Delete Student
@@ -201,10 +203,349 @@ class ReportStudioTest extends TestCase
 
         // 3. Soft Delete Report from History
         $response = $this->delete("/history/{$report->id}");
-        $response->assertRedirect('/history');
+        $response->assertRedirect(route('history.student', $student->id));
         $this->assertSoftDeleted('reports', [
             'id' => $report->id
         ]);
+    }
+
+    /**
+     * Test Pending Report CRUD lifecycle.
+     */
+    public function test_pending_report_crud_lifecycle(): void
+    {
+        $this->actingAs($this->user);
+
+        $student = Student::create([
+            'name' => 'Adit',
+            'subject' => 'Fisika Dasar',
+            'meeting_count' => 2
+        ]);
+
+        // 1. Create Pending Report
+        $response = $this->post('/pending-reports', [
+            'student_id' => $student->id,
+            'meeting_number' => 3,
+            'report_date' => '2026-07-16'
+        ]);
+
+        $response->assertRedirect('/pending-reports');
+        $this->assertDatabaseHas('pending_reports', [
+            'student_id' => $student->id,
+            'meeting_number' => 3
+        ]);
+
+        $pending = \App\Models\PendingReport::first();
+        $this->assertEquals('2026-07-16', $pending->report_date->format('Y-m-d'));
+
+        // 2. Update Pending Report
+        $response = $this->put("/pending-reports/{$pending->id}", [
+            'student_id' => $student->id,
+            'meeting_number' => 4,
+            'report_date' => '2026-07-17'
+        ]);
+
+        $response->assertRedirect('/pending-reports');
+        $this->assertDatabaseHas('pending_reports', [
+            'id' => $pending->id,
+            'meeting_number' => 4
+        ]);
+        
+        $pending->refresh();
+        $this->assertEquals('2026-07-17', $pending->report_date->format('Y-m-d'));
+
+        // 3. Delete Pending Report
+        $response = $this->delete("/pending-reports/{$pending->id}");
+        $response->assertRedirect('/pending-reports');
+        $this->assertSoftDeleted('pending_reports', [
+            'id' => $pending->id
+        ]);
+    }
+
+    /**
+     * Test saving a report automatically deletes the associated pending report.
+     */
+    public function test_saving_report_deletes_associated_pending_report(): void
+    {
+        $this->actingAs($this->user);
+
+        $student = Student::create([
+            'name' => 'Adit',
+            'subject' => 'Fisika Dasar',
+            'meeting_count' => 2
+        ]);
+
+        $pending = \App\Models\PendingReport::create([
+            'student_id' => $student->id,
+            'meeting_number' => 3,
+            'report_date' => '2026-07-16'
+        ]);
+
+        $response = $this->post('/reports', [
+            'student_id' => $student->id,
+            'meeting_number' => 3,
+            'report_date' => '2026-07-16',
+            'materi' => 'Kinematika',
+            'behavior' => 'Sangat antusias',
+            'content' => 'Laporan hasil belajar kinetika.',
+            'pending_report_id' => $pending->id
+        ]);
+
+        $response->assertRedirect('/');
+
+        // Assert report is saved
+        $this->assertDatabaseHas('reports', [
+            'student_id' => $student->id,
+            'meeting_number' => 3,
+            'content' => 'Laporan hasil belajar kinetika.'
+        ]);
+
+        // Assert pending report is deleted (soft deleted)
+        $this->assertSoftDeleted('pending_reports', [
+            'id' => $pending->id
+        ]);
+
+        // Assert student meeting count incremented
+        $student->refresh();
+        $this->assertEquals(3, $student->meeting_count);
+    }
+
+    /**
+     * Test saving report with image file upload (falling back to local).
+     */
+    public function test_saving_report_with_image_upload(): void
+    {
+        $this->actingAs($this->user);
+
+        // Setup student
+        $student = Student::create([
+            'name' => 'Renziro',
+            'subject' => 'Javascript Developer',
+            'meeting_count' => 5
+        ]);
+
+        // Fake the public storage disk
+        \Illuminate\Support\Facades\Storage::fake('public');
+
+        $fakeImage = \Illuminate\Http\UploadedFile::fake()->create('lesson.jpg', 100, 'image/jpeg');
+
+        $response = $this->post('/reports', [
+            'student_id' => $student->id,
+            'meeting_number' => 6,
+            'report_date' => '2026-07-09',
+            'materi' => 'Database migrations',
+            'behavior' => 'Sangat memahami penjelasan dengan baik',
+            'content' => 'Ini adalah konten hasil generate AI.',
+            'image' => $fakeImage
+        ]);
+
+        $response->assertRedirect('/');
+
+        // Get the saved report to check the image URL
+        $report = Report::where('student_id', $student->id)->where('meeting_number', 6)->first();
+        $this->assertNotNull($report->image_url);
+
+        // Extract the path details
+        $storedFilename = basename($report->image_url);
+        
+        // Assert file was stored on public disk under reports/{student_id}
+        \Illuminate\Support\Facades\Storage::disk('public')->assertExists("reports/{$student->id}/{$storedFilename}");
+    }
+
+    /**
+     * Test updating a report and uploading/replacing its image.
+     */
+    public function test_updating_report_and_image_upload(): void
+    {
+        $this->actingAs($this->user);
+
+        $student = Student::create([
+            'name' => 'Renziro',
+            'subject' => 'Javascript Developer',
+            'meeting_count' => 5
+        ]);
+
+        $report = Report::create([
+            'student_id' => $student->id,
+            'student_name' => 'Renziro',
+            'subject' => 'Javascript Developer',
+            'meeting_number' => 6,
+            'report_date' => '2026-07-09',
+            'materi' => 'Initial Lesson',
+            'behavior' => 'Sangat bagus',
+            'content' => 'Konten awal.'
+        ]);
+
+        // Fake storage
+        \Illuminate\Support\Facades\Storage::fake('public');
+
+        $fakeImage = \Illuminate\Http\UploadedFile::fake()->create('updated_lesson.jpg', 100, 'image/jpeg');
+
+        // PUT request to update report
+        $response = $this->put("/reports/{$report->id}", [
+            'meeting_number' => 7,
+            'report_date' => '2026-07-10',
+            'materi' => 'Updated Lesson',
+            'behavior' => 'Kurang konsentrasi',
+            'content' => 'Konten terupdate.',
+            'image' => $fakeImage
+        ]);
+
+        $response->assertRedirect(); // redirects back
+
+        $report->refresh();
+        $this->assertEquals(7, $report->meeting_number);
+        $this->assertEquals('2026-07-10', $report->report_date->format('Y-m-d'));
+        $this->assertEquals('Updated Lesson', $report->materi);
+        $this->assertEquals('Kurang konsentrasi', $report->behavior);
+        $this->assertEquals('Konten terupdate.', $report->content);
+        $this->assertNotNull($report->image_url);
+
+        $storedFilename = basename($report->image_url);
+        \Illuminate\Support\Facades\Storage::disk('public')->assertExists("reports/{$student->id}/{$storedFilename}");
+    }
+
+    /**
+     * Test Schedule CRUD operations.
+     */
+    public function test_schedule_crud_operations(): void
+    {
+        $this->actingAs($this->user);
+
+        $student = Student::create([
+            'name' => 'Azzam Sched',
+            'subject' => 'Fisika',
+            'meeting_count' => 0
+        ]);
+
+        // 1. Create Schedule
+        $response = $this->post('/schedule', [
+            'day_of_week' => 3, // Rabu
+            'start_time' => '15:00',
+            'end_time' => '16:30',
+            'label' => 'Ruang Steve Jobs',
+            'student_ids' => [$student->id]
+        ]);
+
+        $response->assertRedirect('/schedule');
+        
+        $schedule = \App\Models\Schedule::first();
+        $this->assertNotNull($schedule);
+        $this->assertEquals(3, $schedule->day_of_week);
+        $this->assertEquals('15:00', substr($schedule->start_time, 0, 5));
+        $this->assertEquals('16:30', substr($schedule->end_time, 0, 5));
+        $this->assertEquals('Ruang Steve Jobs', $schedule->label);
+        $this->assertCount(1, $schedule->students);
+
+        // 2. Update Schedule
+        $response = $this->put("/schedule/{$schedule->id}", [
+            'day_of_week' => 4, // Kamis
+            'start_time' => '16:00',
+            'end_time' => '17:30',
+            'label' => 'Ruang Elon Musk',
+            'student_ids' => [$student->id]
+        ]);
+
+        $response->assertRedirect('/schedule');
+        
+        $schedule->refresh();
+        $this->assertEquals(4, $schedule->day_of_week);
+        $this->assertEquals('16:00', substr($schedule->start_time, 0, 5));
+        $this->assertEquals('17:30', substr($schedule->end_time, 0, 5));
+        $this->assertEquals('Ruang Elon Musk', $schedule->label);
+
+        // 3. Delete Schedule
+        $response = $this->delete("/schedule/{$schedule->id}");
+        $response->assertRedirect('/schedule');
+        $this->assertSoftDeleted('schedules', [
+            'id' => $schedule->id
+        ]);
+    }
+
+    /**
+     * Test automatic weekly pending report calculation.
+     */
+    public function test_automatic_pending_report_generation(): void
+    {
+        $this->actingAs($this->user);
+
+        // Set current test date to Sunday July 12, 2026
+        \Carbon\Carbon::setTestNow('2026-07-12');
+
+        $student = Student::create([
+            'name' => 'Azzam Sched Auto',
+            'subject' => 'Kimia',
+            'meeting_count' => 2
+        ]);
+
+        // Create weekly schedule slot for Wednesday (3)
+        $schedule = \App\Models\Schedule::create([
+            'day_of_week' => 3,
+            'start_time' => '14:00',
+            'end_time' => '15:30',
+            'label' => 'Lab Kimia'
+        ]);
+
+        $schedule->students()->attach($student->id);
+
+        // Run sync
+        \App\Services\Schedule\PendingReportService::sync();
+
+        // The closest past Wednesday relative to Sunday July 12, 2026 is Wednesday July 8, 2026.
+        // There should be an automatic pending report for Wednesday July 8, 2026 (Meeting 3)
+        $pending = \App\Models\PendingReport::where('student_id', $student->id)->first();
+        $this->assertNotNull($pending);
+        $this->assertEquals(3, $pending->meeting_number);
+        $this->assertEquals('2026-07-08', \Carbon\Carbon::parse($pending->report_date)->format('Y-m-d'));
+
+        // Clean up Carbon test time
+        \Carbon\Carbon::setTestNow();
+    }
+
+    /**
+     * Test automatic weekly pending report calculation using first_meeting_date.
+     */
+    public function test_automatic_pending_report_generation_with_first_meeting_date(): void
+    {
+        $this->actingAs($this->user);
+
+        // Set current test date to Sunday July 12, 2026
+        \Carbon\Carbon::setTestNow('2026-07-12');
+
+        $student = Student::create([
+            'name' => 'Azzam First Date',
+            'subject' => 'Fisika',
+            'meeting_count' => 0,
+            'first_meeting_date' => '2026-07-01' // Wednesday
+        ]);
+
+        // Create weekly schedule slot for Wednesday (3)
+        $schedule = \App\Models\Schedule::create([
+            'day_of_week' => 3,
+            'start_time' => '14:00',
+            'end_time' => '15:30',
+            'label' => 'Lab Fisika'
+        ]);
+
+        $schedule->students()->attach($student->id);
+
+        // Run sync
+        \App\Services\Schedule\PendingReportService::sync();
+
+        // The calculation should start exactly from Wednesday July 1, 2026!
+        // It will generate pending reports for July 1 (Meeting 1) and July 8 (Meeting 2).
+        $pendingReports = \App\Models\PendingReport::where('student_id', $student->id)
+            ->orderBy('meeting_number', 'asc')
+            ->get();
+
+        $this->assertCount(2, $pendingReports);
+        $this->assertEquals(1, $pendingReports[0]->meeting_number);
+        $this->assertEquals('2026-07-01', \Carbon\Carbon::parse($pendingReports[0]->report_date)->format('Y-m-d'));
+        $this->assertEquals(2, $pendingReports[1]->meeting_number);
+        $this->assertEquals('2026-07-08', \Carbon\Carbon::parse($pendingReports[1]->report_date)->format('Y-m-d'));
+
+        // Clean up Carbon test time
+        \Carbon\Carbon::setTestNow();
     }
 
     /**
@@ -214,11 +555,12 @@ class ReportStudioTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        // Update provider, model and key
+        // Update provider, model, key and WA number
         $response = $this->put('/settings', [
             'ai_provider' => 'groq',
             'ai_model' => 'llama3-8b-8192',
-            'ai_api_key' => 'new-secret-api-key'
+            'ai_api_key' => 'new-secret-api-key',
+            'admin_wa_number' => '628123456789'
         ]);
 
         $response->assertRedirect('/settings');
@@ -226,5 +568,6 @@ class ReportStudioTest extends TestCase
         $this->assertEquals('groq', AppSetting::getValue('ai_provider'));
         $this->assertEquals('llama3-8b-8192', AppSetting::getValue('ai_model'));
         $this->assertEquals('new-secret-api-key', AppSetting::getValue('ai_api_key'));
+        $this->assertEquals('628123456789', AppSetting::getValue('admin_wa_number'));
     }
 }

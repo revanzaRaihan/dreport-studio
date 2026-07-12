@@ -17,6 +17,7 @@ class UpdateStudentRequest extends FormRequest
             'name'          => ['required', 'string', 'max:255'],
             'subject'       => ['required', 'string', 'max:255'],
             'meeting_count' => ['required', 'integer', 'min:0'],
+            'first_meeting_date' => ['nullable', 'date'],
         ];
     }
 }

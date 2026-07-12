@@ -22,19 +22,20 @@ class GroqReportGenerator implements AiReportGeneratorInterface
 
         $url = 'https://api.groq.com/openai/v1/chat/completions';
 
-        $response = Http::withHeaders([
-            'Authorization' => 'Bearer ' . $apiKey,
-            'Content-Type' => 'application/json',
-        ])->post($url, [
-            'model' => $model,
-            'messages' => [
-                [
-                    'role' => 'user',
-                    'content' => $prompt
-                ]
-            ],
-            'temperature' => 0.7
-        ]);
+        $response = Http::timeout(120)
+            ->withHeaders([
+                'Authorization' => 'Bearer ' . $apiKey,
+                'Content-Type' => 'application/json',
+            ])->post($url, [
+                'model' => $model,
+                'messages' => [
+                    [
+                        'role' => 'user',
+                        'content' => $prompt
+                    ]
+                ],
+                'temperature' => 0.7
+            ]);
 
         if ($response->failed()) {
             $errorMsg = $response->json('error.message') ?? 'HTTP error ' . $response->status();

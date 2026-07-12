@@ -29,6 +29,8 @@ class ReportController extends Controller
      */
     public function index(): View
     {
+        \App\Services\Schedule\PendingReportService::sync();
+
         $students = Student::orderBy('name')->get();
         
         // Calculate dynamic meeting numbers mapped by student ID
@@ -37,7 +39,19 @@ class ReportController extends Controller
         // Get dataset count for warnings if empty
         $datasetCount = DatasetEntry::count();
 
-        return view('report.generate', compact('students', 'meetingNumbers', 'datasetCount'));
+        // Get pending reports grouped by student ID
+        $pendingReports = \App\Models\PendingReport::orderBy('meeting_number', 'asc')
+            ->get()
+            ->groupBy('student_id')
+            ->map(function ($reports) {
+                return $reports->map(fn($r) => [
+                    'id' => $r->id,
+                    'meeting_number' => $r->meeting_number,
+                    'report_date' => $r->report_date->format('Y-m-d')
+                ]);
+            });
+
+        return view('report.generate', compact('students', 'meetingNumbers', 'datasetCount', 'pendingReports'));
     }
 
     /**
@@ -45,6 +59,9 @@ class ReportController extends Controller
      */
     public function generate(GenerateReportRequest $request, BuildAiPrompt $buildPrompt): JsonResponse
     {
+        // Allow enough time for AI API to respond (Gemini 2.5-flash can be slow on reasoning)
+        set_time_limit(120);
+
         $validated = $request->validated();
         
         // Verify we have at least one dataset entry
@@ -101,9 +118,20 @@ class ReportController extends Controller
             'materi' => ['required', 'string'],
             'behavior' => ['required', 'string'],
             'content' => ['required', 'string'],
+            'pending_report_id' => ['nullable', 'uuid', 'exists:pending_reports,id'],
+            'image' => ['nullable', 'image', 'max:5120'], // Max 5MB
         ]);
 
         $student = Student::findOrFail($validated['student_id']);
+
+        $imageUrl = null;
+        if ($request->hasFile('image')) {
+            $file = $request->file('image');
+            $extension = $file->getClientOriginalExtension();
+            $path = 'reports/' . $student->id . '/' . time() . '_' . uniqid() . '.' . $extension;
+
+            $imageUrl = \App\Services\Supabase\SupabaseStorage::upload($file, $path);
+        }
 
         // Save report
         Report::create([
@@ -115,12 +143,54 @@ class ReportController extends Controller
             'materi' => $validated['materi'],
             'behavior' => $validated['behavior'],
             'content' => $validated['content'],
+            'image_url' => $imageUrl,
         ]);
+
+        // Delete the pending report if it was resolved
+        if (!empty($validated['pending_report_id'])) {
+            \App\Models\PendingReport::where('id', $validated['pending_report_id'])->delete();
+        }
 
         // Increment student meeting count
         $student->increment('meeting_count');
 
         return redirect()->route('report.index')
             ->with('success', 'Laporan berhasil disimpan ke riwayat.');
+    }
+
+    /**
+     * Update the specified report in storage.
+     */
+    public function update(Request $request, Report $report): RedirectResponse
+    {
+        $validated = $request->validate([
+            'meeting_number' => ['required', 'integer'],
+            'report_date' => ['required', 'date'],
+            'materi' => ['required', 'string'],
+            'behavior' => ['required', 'string'],
+            'content' => ['required', 'string'],
+            'image' => ['nullable', 'image', 'max:5120'], // Max 5MB
+        ]);
+
+        $imageUrl = $report->image_url;
+        if ($request->hasFile('image')) {
+            $file = $request->file('image');
+            $extension = $file->getClientOriginalExtension();
+            $path = 'reports/' . ($report->student_id ?? 'global') . '/' . time() . '_' . uniqid() . '.' . $extension;
+
+            $imageUrl = \App\Services\Supabase\SupabaseStorage::upload($file, $path);
+        }
+
+        $report->update([
+            'meeting_number' => $validated['meeting_number'],
+            'report_date' => $validated['report_date'],
+            'materi' => $validated['materi'],
+            'behavior' => $validated['behavior'],
+            'content' => $validated['content'],
+            'image_url' => $imageUrl,
+        ]);
+
+        return redirect()->back()
+            ->with('success', 'Laporan berhasil diperbarui.');
     }
 }

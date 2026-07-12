@@ -1,5 +1,8 @@
 @extends('layouts.app')
 
+@section('page_title', 'Dataset Gaya Penulisan')
+@section('page_description', 'Latih kecerdasan buatan dengan contoh laporan lama agar hasil generate mirip gaya tulisan Anda.')
+
 @section('content')
 <section class="panel active" id="tab-dataset">
     <!-- Tambah Dataset Card -->

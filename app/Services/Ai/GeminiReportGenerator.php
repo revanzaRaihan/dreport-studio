@@ -22,17 +22,18 @@ class GeminiReportGenerator implements AiReportGeneratorInterface
 
         $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
 
-        $response = Http::withHeaders([
-            'Content-Type' => 'application/json',
-        ])->post($url, [
-            'contents' => [
-                [
-                    'parts' => [
-                        ['text' => $prompt]
+        $response = Http::timeout(120)
+            ->withHeaders([
+                'Content-Type' => 'application/json',
+            ])->post($url, [
+                'contents' => [
+                    [
+                        'parts' => [
+                            ['text' => $prompt]
+                        ]
                     ]
                 ]
-            ]
-        ]);
+            ]);
 
         if ($response->failed()) {
             $errorMsg = $response->json('error.message') ?? 'HTTP error ' . $response->status();

@@ -17,6 +17,7 @@ class UpdateSettingsRequest extends FormRequest
             'ai_provider' => ['required', 'string', 'in:gemini,groq'],
             'ai_model' => ['required', 'string', 'max:255'],
             'ai_api_key' => ['nullable', 'string', 'max:500'],
+            'admin_wa_number' => ['nullable', 'string', 'max:50'],
         ];
     }
 }

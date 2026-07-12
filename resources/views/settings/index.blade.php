@@ -1,5 +1,8 @@
 @extends('layouts.app')
 
+@section('page_title', 'Pengaturan Aplikasi')
+@section('page_description', 'Konfigurasi kunci API kecerdasan buatan (AI) dan nomor tujuan WhatsApp.')
+
 @section('content')
 <section class="panel active" id="tab-pengaturan">
     <div class="card">
@@ -24,9 +27,14 @@
 
             <label for="modelName">Nama Model</label>
             <input type="text" id="modelName" name="ai_model" value="{{ $model }}" placeholder="gemini-2.5-flash" required>
-            
-            <p class="desc" id="modelHelpText" style="margin-top:-6px; font-size: 11.5px;">
+            <p class="desc" id="modelHelpText" style="margin-top:-6px; font-size: 11.5px; margin-bottom: 14px;">
                 Rekomendasi model Gemini: <code>gemini-2.5-flash</code> atau <code>gemini-1.5-flash</code>.
+            </p>
+            
+            <label for="adminWaNumber">Nomor WhatsApp Admin</label>
+            <input type="text" id="adminWaNumber" name="admin_wa_number" value="{{ $waNumber }}" placeholder="mis. 628123456789" autocomplete="off">
+            <p class="desc" style="margin-top:-6px; font-size: 11.5px; margin-bottom: 20px;">
+                Gunakan format kode negara tanpa karakter '+' atau spasi (mis. <code>628123456789</code>). Jika diisi, tombol Kirim WA akan langsung tertuju ke nomor ini.
             </p>
 
             <button type="submit" class="btn">Simpan Pengaturan</button>

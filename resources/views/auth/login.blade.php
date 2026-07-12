@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login — Report Studio</title>
     <link rel="stylesheet" href="{{ asset('css/app-custom.css') }}">
+    <link rel="icon" type="image/png" href="{{ asset('images/icons/favicon/favicon-96x96.png') }}" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="{{ asset('images/icons/favicon/favicon.svg') }}" />
+    <link rel="shortcut icon" href="{{ asset('images/icons/favicon/favicon.ico') }}" />
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/icons/favicon/apple-touch-icon.png') }}" />
+    <link rel="manifest" href="{{ asset('images/icons/favicon/site.webmanifest') }}" />
     <style>
         body {
             display: flex;

@@ -19,16 +19,18 @@ class HistoryController extends Controller
         $search  = $request->query('search');
         $reports = Report::where('student_id', $student->id)
             ->when($search, fn($q) => $q->where(function ($q) use ($search) {
-                $q->where('materi', 'like', "%{$search}%")
-                  ->orWhere('behavior', 'like', "%{$search}%")
-                  ->orWhere('content', 'like', "%{$search}%");
+                $q->where('materi', 'ilike', "%{$search}%")
+                  ->orWhere('behavior', 'ilike', "%{$search}%")
+                  ->orWhere('content', 'ilike', "%{$search}%");
             }))
             ->orderBy('report_date', 'desc')
             ->orderBy('created_at', 'desc')
             ->paginate(5)
             ->withQueryString();
 
-        return view('history.show', compact('student', 'reports', 'search'));
+        $adminWaNumber = \App\Models\AppSetting::getValue('admin_wa_number', '');
+
+        return view('history.show', compact('student', 'reports', 'search', 'adminWaNumber'));
     }
 
     /**
@@ -36,24 +38,21 @@ class HistoryController extends Controller
      */
     public function index(Request $request): View
     {
-        $studentId = $request->query('student_id');
-        $search    = $request->query('search');
-        $student   = $studentId ? Student::withTrashed()->find($studentId) : null;
+        $search = $request->query('search');
 
-        $reports = Report::orderBy('report_date', 'desc')
-            ->orderBy('created_at', 'desc')
-            ->when($student, fn($q) => $q->where('student_id', $student->id))
-            ->when($search, fn($q) => $q->where(function ($q) use ($search) {
-                $q->where('student_name', 'like', "%{$search}%")
-                  ->orWhere('materi', 'like', "%{$search}%")
-                  ->orWhere('behavior', 'like', "%{$search}%");
-            }))
-            ->paginate(5)
+        $studentsWithReports = Student::whereHas('reports')
+            ->orderBy('name')
+            ->when($search, function ($q) use ($search) {
+                $q->where(function ($sq) use ($search) {
+                    $sq->where('name', 'ilike', "%{$search}%")
+                       ->orWhere('subject', 'ilike', "%{$search}%");
+                });
+            })
+            ->withCount('reports')
+            ->paginate(10)
             ->withQueryString();
 
-        $students = Student::orderBy('name')->get();
-
-        return view('history.index', compact('reports', 'student', 'students', 'search'));
+        return view('history.index', compact('studentsWithReports', 'search'));
     }
 
     /**

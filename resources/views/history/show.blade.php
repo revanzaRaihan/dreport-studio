@@ -1,5 +1,8 @@
 @extends('layouts.app')
 
+@section('page_title', 'Riwayat Laporan: ' . $student->name)
+@section('page_description', 'Daftar seluruh laporan belajar yang telah tersimpan untuk murid ini.')
+
 @section('breadcrumb')
     <a href="{{ route('history.index') }}">Riwayat</a>
     <span class="sep">›</span>
@@ -61,12 +64,39 @@
                         </div>
 
                         <span style="color: var(--ink); white-space: pre-wrap; margin-top: 10px; display: block; font-size: 13.5px; line-height: 1.6;">{{ $report->content }}</span>
+                        
+                        @if($report->image_url)
+                            <div style="margin-top: 12px; max-width: 100%;">
+                                <img src="{{ $report->image_url }}" alt="Dokumentasi Kelas" style="max-width: 260px; max-height: 180px; object-fit: cover; border-radius: 8px; border: 1.5px solid var(--line, #E4DCCE); box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+                            </div>
+                        @endif
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; align-items: flex-end;">
+                        <button class="btn btn-wa" style="padding: 6px 10px; background-color: #25D366; color: white; border: none;"
+                                data-meeting="{{ $report->meeting_number }}"
+                                data-date="{{ $report->report_date->format('d/m/Y') }}"
+                                data-materi="{{ $report->materi }}"
+                                data-behavior="{{ $report->behavior }}"
+                                data-content="{{ $report->content }}"
+                                data-image="{{ $report->image_url }}">
+                            Kirim WA
+                        </button>
+
                         <button class="btn secondary" style="padding: 6px 10px;" onclick="copyText('{{ addslashes($report->content) }}')">Copy</button>
+                        
+                        <button class="btn secondary btn-edit" style="padding: 6px 10px;"
+                                data-id="{{ $report->id }}"
+                                data-meeting="{{ $report->meeting_number }}"
+                                data-date="{{ $report->report_date->format('Y-m-d') }}"
+                                data-materi="{{ $report->materi }}"
+                                data-behavior="{{ $report->behavior }}"
+                                data-content="{{ $report->content }}"
+                                data-image="{{ $report->image_url }}">
+                            Edit
+                        </button>
 
                         <form action="{{ route('history.destroy', $report->id) }}" method="POST"
-                              onsubmit="return confirm('Hapus laporan ini dari riwayat?')" style="margin: 0;">
+                               onsubmit="return confirm('Hapus laporan ini dari riwayat?')" style="margin: 0;">
                             @csrf
                             @method('DELETE')
                             <input type="hidden" name="_redirect" value="{{ route('history.student', $student->id) }}">
@@ -80,14 +110,141 @@
         @endif
     </div>
 </section>
+
+<!-- Edit Report Modal -->
+<div class="modal-backdrop" id="editReportModal">
+    <div class="modal-content" style="max-width: 600px; width: 90%;">
+        <h2 style="font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 600; margin-bottom: 8px;">Edit Laporan Belajar</h2>
+        <p class="desc" style="margin-bottom: 16px;">Ubah rincian pertemuan, materi, behavior, isi laporan, atau unggah foto baru.</p>
+        
+        <form id="editReportForm" method="POST" enctype="multipart/form-data">
+            @csrf
+            @method('PUT')
+            
+            <div class="row" style="margin-bottom: 12px;">
+                <div>
+                    <label for="editMeetingNumber">Pertemuan Ke-</label>
+                    <input type="number" id="editMeetingNumber" name="meeting_number" min="1" required>
+                </div>
+                <div>
+                    <label for="editReportDate">Tanggal Pertemuan</label>
+                    <input type="date" id="editReportDate" name="report_date" required>
+                </div>
+            </div>
+
+            <label for="editMateri">Materi</label>
+            <input type="text" id="editMateri" name="materi" required autocomplete="off">
+
+            <label for="editBehavior">Behavior Murid</label>
+            <textarea id="editBehavior" name="behavior" rows="3" required style="width: 100%; border: 1.5px solid var(--line); border-radius: 8px; padding: 10px 12px; font-family: inherit; font-size: 14px; margin-bottom: 12px; box-sizing: border-box; resize: vertical;"></textarea>
+
+            <label for="editContent">Isi Laporan Belajar</label>
+            <textarea id="editContent" name="content" rows="6" required style="width: 100%; border: 1.5px solid var(--line); border-radius: 8px; padding: 10px 12px; font-family: inherit; font-size: 14px; margin-bottom: 12px; box-sizing: border-box; resize: vertical;"></textarea>
+
+            <label for="editImage">Foto Dokumentasi (Ganti / Unggah Baru)</label>
+            <input type="file" id="editImage" name="image" accept="image/*" class="no-tom-select" style="background: #FCFAF6; border: 1.5px solid var(--line, #E4DCCE); border-radius: 8px; padding: 10px 12px; font-size: 14px; font-family: inherit; color: var(--ink, #1B2A41); cursor: pointer; width: 100%; box-sizing: border-box;">
+            
+            <!-- Existing Image Preview -->
+            <div id="editImagePreviewWrapper" style="margin-top: 12px; display: none;">
+                <span style="font-size: 12px; color: var(--muted); display: block; margin-bottom: 4px;">Foto saat ini:</span>
+                <img id="editImagePreview" src="" alt="Preview Dokumentasi" style="max-width: 200px; max-height: 120px; object-fit: cover; border-radius: 6px; border: 1.5px solid var(--line);">
+            </div>
+            
+            <div class="actions-row" style="justify-content: flex-end; margin-top: 20px;">
+                <button type="button" class="btn secondary" onclick="closeEditModal()">Batal</button>
+                <button type="submit" class="btn">Simpan Perubahan</button>
+            </div>
+        </form>
+    </div>
+</div>
 @endsection
 
 @section('scripts')
 <script>
+    const adminWaNumber = @json($adminWaNumber);
+
     function copyText(text) {
         navigator.clipboard.writeText(text)
             .then(() => showToast('Disalin ke clipboard'))
             .catch(() => showToast('Gagal menyalin. Silakan copy manual.'));
     }
+
+    document.querySelectorAll('.btn-wa').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const meeting = this.dataset.meeting;
+            const date = this.dataset.date;
+            const materi = this.dataset.materi;
+            const behavior = this.dataset.behavior;
+            const content = this.dataset.content;
+            const imageUrl = this.dataset.image;
+
+            // Format message: langsung kirim teks laporan asli tanpa format tambahan
+            let message = content;
+
+            const encodedText = encodeURIComponent(message);
+            
+            let waUrl = `whatsapp://send?text=${encodedText}`;
+            if (adminWaNumber) {
+                const cleanPhone = adminWaNumber.replace(/\D/g, '');
+                waUrl = `whatsapp://send?phone=${cleanPhone}&text=${encodedText}`;
+            }
+
+            window.open(waUrl, '_blank');
+        });
+    });
+
+    // --- Edit Modal Controls ---
+    const editModal = document.getElementById('editReportModal');
+    const editForm = document.getElementById('editReportForm');
+    const editMeetingNumber = document.getElementById('editMeetingNumber');
+    const editReportDate = document.getElementById('editReportDate');
+    const editMateri = document.getElementById('editMateri');
+    const editBehavior = document.getElementById('editBehavior');
+    const editContent = document.getElementById('editContent');
+    const editImagePreviewWrapper = document.getElementById('editImagePreviewWrapper');
+    const editImagePreview = document.getElementById('editImagePreview');
+
+    function openEditModal(id, meeting, date, materi, behavior, content, imageUrl) {
+        editForm.action = `/reports/${id}`;
+        editMeetingNumber.value = meeting;
+        editReportDate.value = date;
+        editMateri.value = materi;
+        editBehavior.value = behavior;
+        editContent.value = content;
+
+        if (imageUrl && imageUrl !== 'null' && imageUrl !== '') {
+            editImagePreview.src = imageUrl;
+            editImagePreviewWrapper.style.display = 'block';
+        } else {
+            editImagePreview.src = '';
+            editImagePreviewWrapper.style.display = 'none';
+        }
+
+        editModal.classList.add('show');
+    }
+
+    function closeEditModal() {
+        editModal.classList.remove('show');
+    }
+
+    editModal.addEventListener('click', function(e) {
+        if (e.target === editModal) {
+            closeEditModal();
+        }
+    });
+
+    document.querySelectorAll('.btn-edit').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            const meeting = this.dataset.meeting;
+            const date = this.dataset.date;
+            const materi = this.dataset.materi;
+            const behavior = this.dataset.behavior;
+            const content = this.dataset.content;
+            const image = this.dataset.image;
+
+            openEditModal(id, meeting, date, materi, behavior, content, image);
+        });
+    });
 </script>
 @endsection

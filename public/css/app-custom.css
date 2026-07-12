@@ -99,7 +99,9 @@ nav.tabs a, nav.tabs button {
     cursor: pointer;
     white-space: nowrap;
     transition: background .15s, color .15s;
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
 nav.tabs a.active, nav.tabs button.active {
@@ -143,7 +145,7 @@ label {
     margin-bottom: 6px;
 }
 
-input[type=text], input[type=number], input[type=password], input[type=email], input[type=date], select, textarea {
+input[type=text], input[type=number], input[type=password], input[type=email], input[type=date], input[type=time], select, textarea {
     width: 100%;
     font-family: 'Inter', sans-serif;
     font-size: 14px;

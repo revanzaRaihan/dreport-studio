@@ -12,6 +12,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/', [ReportController::class, 'index'])->name('report.index');
     Route::post('/reports/generate', [ReportController::class, 'generate'])->name('report.generate');
     Route::post('/reports', [ReportController::class, 'store'])->name('report.store');
+    Route::put('/reports/{report}', [ReportController::class, 'update'])->name('report.update');
 
     // Students CRUD
     Route::get('/students', [StudentController::class, 'index'])->name('students.index');
@@ -32,6 +33,15 @@ Route::middleware(['auth'])->group(function () {
     // Settings
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
     Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');
+
+    // Schedule CRUD
+    Route::resource('schedule', \App\Http\Controllers\Schedule\ScheduleController::class)->except(['create', 'edit', 'show']);
+
+    // Pending Reports CRUD
+    Route::get('/pending-reports', [\App\Http\Controllers\PendingReport\PendingReportController::class, 'index'])->name('pending-reports.index');
+    Route::post('/pending-reports', [\App\Http\Controllers\PendingReport\PendingReportController::class, 'store'])->name('pending-reports.store');
+    Route::put('/pending-reports/{pending_report}', [\App\Http\Controllers\PendingReport\PendingReportController::class, 'update'])->name('pending-reports.update');
+    Route::delete('/pending-reports/{pending_report}', [\App\Http\Controllers\PendingReport\PendingReportController::class, 'destroy'])->name('pending-reports.destroy');
 });
 
 require __DIR__.'/auth.php';
