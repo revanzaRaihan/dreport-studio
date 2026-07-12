@@ -71,8 +71,8 @@
                 <div style="flex: 2;">
                     <label style="font-weight: 600;">Pencarian &amp; Filter Murid</label>
                     <div style="display: flex; gap: 8px;">
-                        <input type="text" id="studentSearch" placeholder="Cari nama murid..." autocomplete="off" style="margin: 0; flex: 1;">
-                        <select id="subjectFilter" style="margin: 0; flex: 1; min-width: 140px;">
+                        <input type="text" id="studentSearch" placeholder="Cari nama murid..." autocomplete="off" style="margin: 0; flex: 1; height: 42px; box-sizing: border-box;">
+                        <select id="subjectFilter" style="margin: 0; flex: 0 0 160px; background: #FCFAF6; border: 1.5px solid var(--line, #E4DCCE); border-radius: 8px; padding: 10px 12px; font-size: 13.5px; font-family: inherit; color: var(--ink, #1B2A41); cursor: pointer; height: 42px; box-sizing: border-box;">
                             <option value="">Semua Mapel</option>
                             @foreach($subjects as $subj)
                                 <option value="{{ $subj }}">{{ $subj }}</option>
@@ -221,15 +221,17 @@
             </div>
 
             <div class="row" style="margin-bottom: 16px;">
-                <div>
+                <div style="width: 100%;">
                     <label>Pencarian &amp; Filter Murid</label>
-                    <input type="text" id="editStudentSearch" placeholder="Cari nama murid..." autocomplete="off" style="margin-bottom: 10px;">
-                    <select id="editSubjectFilter">
-                        <option value="">Semua Mata Pelajaran / Kelas</option>
-                        @foreach($subjects as $subj)
-                            <option value="{{ $subj }}">{{ $subj }}</option>
-                        @endforeach
-                    </select>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="editStudentSearch" placeholder="Cari nama murid..." autocomplete="off" style="margin: 0; flex: 1; height: 42px; box-sizing: border-box;">
+                        <select id="editSubjectFilter" style="margin: 0; flex: 0 0 160px; background: #FCFAF6; border: 1.5px solid var(--line, #E4DCCE); border-radius: 8px; padding: 10px 12px; font-size: 13.5px; font-family: inherit; color: var(--ink, #1B2A41); cursor: pointer; height: 42px; box-sizing: border-box;">
+                            <option value="">Semua Mapel</option>
+                            @foreach($subjects as $subj)
+                                <option value="{{ $subj }}">{{ $subj }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                 </div>
                 <div>
                     <label>Assign Murid ke Sesi Ini</label>
