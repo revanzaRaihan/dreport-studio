@@ -7,32 +7,51 @@ use App\Models\Report;
 use App\Models\PendingReport;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 
 class PendingReportService
 {
+    private static string $cacheKey = 'pending_reports_sync_timestamp';
+
+    /**
+     * Clear the sync status cache, forcing a refresh on next page load.
+     */
+    public static function clearCache(): void
+    {
+        Cache::forget(self::$cacheKey);
+    }
+
     /**
      * Synchronize and auto-calculate pending reports for all students.
      * Optimizes performance by pre-loading collections into memory to avoid N+1 query loops.
      */
     public static function sync(): void
     {
+        // Performance optimization: skip sync if it has run recently
+        if (Cache::has(self::$cacheKey)) {
+            return;
+        }
+
         try {
             // Get all students with their active schedules
             $students = Student::with('schedules')->get();
 
             if ($students->isEmpty()) {
+                Cache::put(self::$cacheKey, true, 600); // cache for 10 mins
                 return;
             }
 
             $studentIds = $students->pluck('id');
 
-            // Pre-fetch all reports grouped by student_id
-            $allReports = Report::whereIn('student_id', $studentIds)
+            // Pre-fetch only necessary columns (excluding heavy content text columns)
+            $allReports = Report::select('id', 'student_id', 'report_date', 'meeting_number')
+                ->whereIn('student_id', $studentIds)
                 ->get()
                 ->groupBy('student_id');
 
-            // Pre-fetch all pending reports grouped by student_id
-            $allPendingReports = PendingReport::whereIn('student_id', $studentIds)
+            // Pre-fetch only necessary columns for pending reports
+            $allPendingReports = PendingReport::select('id', 'student_id', 'report_date')
+                ->whereIn('student_id', $studentIds)
                 ->get()
                 ->groupBy('student_id');
 
@@ -116,6 +135,10 @@ class PendingReportService
                     }
                 }
             }
+
+            // Cache the sync timestamp for 10 minutes (600 seconds)
+            Cache::put(self::$cacheKey, true, 600);
+
         } catch (\Exception $e) {
             Log::error('Auto pending report generation error: ' . $e->getMessage());
         }

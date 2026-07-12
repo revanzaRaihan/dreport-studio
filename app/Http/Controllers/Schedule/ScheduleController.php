@@ -70,6 +70,9 @@ class ScheduleController extends Controller
 
         $schedule->students()->sync($validated['student_ids'] ?? []);
 
+        // Clear sync cache to force recalculation
+        PendingReportService::clearCache();
+
         // Sync pending reports immediately to reflect the new schedule
         PendingReportService::sync();
 
@@ -100,6 +103,9 @@ class ScheduleController extends Controller
 
         $schedule->students()->sync($validated['student_ids'] ?? []);
 
+        // Clear sync cache to force recalculation
+        PendingReportService::clearCache();
+
         // Sync pending reports immediately to reflect schedule changes
         PendingReportService::sync();
 
@@ -115,6 +121,8 @@ class ScheduleController extends Controller
         // Detach students before soft-deleting
         $schedule->students()->detach();
         $schedule->delete();
+
+        PendingReportService::clearCache();
 
         return redirect()->route('schedule.index')
             ->with('success', 'Jadwal berhasil dihapus.');

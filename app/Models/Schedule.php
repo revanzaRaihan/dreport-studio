@@ -27,4 +27,15 @@ class Schedule extends Model
         return $this->belongsToMany(Student::class, 'schedule_student')
                     ->withTimestamps();
     }
+
+    protected static function booted()
+    {
+        static::saved(function () {
+            \App\Services\Schedule\PendingReportService::clearCache();
+        });
+
+        static::deleted(function () {
+            \App\Services\Schedule\PendingReportService::clearCache();
+        });
+    }
 }

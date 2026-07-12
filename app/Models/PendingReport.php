@@ -25,4 +25,15 @@ class PendingReport extends Model
     {
         return $this->belongsTo(Student::class);
     }
+
+    protected static function booted()
+    {
+        static::saved(function () {
+            \App\Services\Schedule\PendingReportService::clearCache();
+        });
+
+        static::deleted(function () {
+            \App\Services\Schedule\PendingReportService::clearCache();
+        });
+    }
 }

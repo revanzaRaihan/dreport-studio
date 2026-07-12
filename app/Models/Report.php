@@ -48,4 +48,15 @@ class Report extends Model
 
         return $value;
     }
+
+    protected static function booted()
+    {
+        static::saved(function () {
+            \App\Services\Schedule\PendingReportService::clearCache();
+        });
+
+        static::deleted(function () {
+            \App\Services\Schedule\PendingReportService::clearCache();
+        });
+    }
 }
