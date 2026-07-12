@@ -31,4 +31,21 @@ class Report extends Model
     {
         return $this->belongsTo(Student::class);
     }
+
+    /**
+     * Get the image URL, automatically resolving local storage host changes.
+     */
+    public function getImageUrlAttribute($value)
+    {
+        if (empty($value)) {
+            return null;
+        }
+
+        // If it's a local storage URL, extract the path starting from /storage/
+        if (preg_match('/\/storage\/reports\/.+$/i', $value, $matches)) {
+            return asset($matches[0]);
+        }
+
+        return $value;
+    }
 }
