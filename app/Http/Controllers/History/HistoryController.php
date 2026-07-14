@@ -25,7 +25,7 @@ class HistoryController extends Controller
             }))
             ->orderBy('report_date', 'desc')
             ->orderBy('created_at', 'desc')
-            ->paginate(5)
+            ->paginate(1000)
             ->withQueryString();
 
         $adminWaNumber = \App\Models\AppSetting::getValue('admin_wa_number', '');
@@ -49,7 +49,7 @@ class HistoryController extends Controller
                 });
             })
             ->withCount('reports')
-            ->paginate(10)
+            ->paginate(1000)
             ->withQueryString();
 
         return view('history.index', compact('studentsWithReports', 'search'));

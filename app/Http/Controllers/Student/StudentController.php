@@ -22,7 +22,7 @@ class StudentController extends Controller
                 $q->where('name', 'ilike', "%{$search}%")
                   ->orWhere('subject', 'ilike', "%{$search}%");
             }))
-            ->paginate(5)
+            ->paginate(1000)
             ->withQueryString();
 
         // Distinct subjects for the subject combobox (includes soft-deleted rows so history is preserved)

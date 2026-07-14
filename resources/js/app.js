@@ -99,65 +99,65 @@ function initSpaEngine() {
         submitForm(form);
     });
 
-    // Real-time live search debounce handler (text typing)
-    let debounceTimer;
+    // Instant Client-Side Live Search & Filtering
     document.addEventListener('input', e => {
         const input = e.target;
-        console.log('[SPA Search] Input event detected on:', input.tagName, 'name:', input.name, 'type:', input.type);
         if (input.tagName === 'INPUT' && (input.type === 'text' || input.type === 'search')) {
             const form = input.closest('form.search-bar');
-            console.log('[SPA Search] Closest form.search-bar:', form);
             if (!form) return;
-            const method = (form.getAttribute('method') || 'GET').toUpperCase();
-            console.log('[SPA Search] Form method:', method);
-            if (method !== 'GET') return;
 
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => {
-                const action = form.getAttribute('action') || window.location.href;
-                const formData = new FormData(form);
-                const params = new URLSearchParams(formData);
-                
-                const url = new URL(action, window.location.origin);
-                params.forEach((value, key) => {
-                    url.searchParams.set(key, value);
-                });
+            // Prevent form submission on Enter key
+            form.addEventListener('submit', event => event.preventDefault());
 
-                console.log('[SPA Search] Triggering loadSearchPage for:', url.toString());
+            const query = input.value.toLowerCase().trim();
 
-                const activeInputName = input.name;
-                const activeInputId = input.id;
-                const selectionStart = input.selectionStart;
-                const selectionEnd = input.selectionEnd;
+            // Determine item selector based on page container ID
+            let itemSelector = '';
+            if (document.getElementById('tab-murid')) {
+                itemSelector = '#tab-murid .list-item';
+            } else if (document.getElementById('tab-riwayat')) {
+                itemSelector = '#tab-riwayat .list-item';
+            } else if (document.getElementById('tab-riwayat-murid')) {
+                itemSelector = '#tab-riwayat-murid .history-card';
+            } else if (document.getElementById('tab-listing-report')) {
+                itemSelector = '#tab-listing-report .list-item';
+            }
 
-                loadSearchPage(url.toString(), activeInputName, activeInputId, selectionStart, selectionEnd);
-            }, 250);
-        }
-    });
+            if (!itemSelector) return;
 
-    // Live search changes handler (comboboxes / dropdowns / checkboxes in search bars)
-    document.addEventListener('change', e => {
-        const el = e.target;
-        console.log('[SPA Search] Change event detected on:', el.tagName, 'name:', el.name, 'type:', el.type);
-        if (el.tagName === 'SELECT' || el.tagName === 'INPUT') {
-            const form = el.closest('form.search-bar');
-            console.log('[SPA Search] Closest form.search-bar (change):', form);
-            if (!form) return;
-            const method = (form.getAttribute('method') || 'GET').toUpperCase();
-            console.log('[SPA Search] Form method (change):', method);
-            if (method !== 'GET') return;
+            const items = document.querySelectorAll(itemSelector);
+            let visibleCount = 0;
 
-            const action = form.getAttribute('action') || window.location.href;
-            const formData = new FormData(form);
-            const params = new URLSearchParams(formData);
-            
-            const url = new URL(action, window.location.origin);
-            params.forEach((value, key) => {
-                url.searchParams.set(key, value);
+            items.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                if (text.includes(query)) {
+                    item.style.display = '';
+                    visibleCount++;
+                } else {
+                    item.style.display = 'none';
+                }
             });
 
-            console.log('[SPA Search] Triggering change loadSearchPage for:', url.toString());
-            loadSearchPage(url.toString());
+            // Handle empty state
+            let emptyMsg = form.parentElement.querySelector('.search-empty-msg');
+            if (visibleCount === 0) {
+                if (!emptyMsg) {
+                    emptyMsg = document.createElement('div');
+                    emptyMsg.className = 'empty search-empty-msg';
+                    emptyMsg.style.marginTop = '16px';
+                    emptyMsg.textContent = `Tidak ada data yang cocok dengan "${input.value}".`;
+                    
+                    const pagination = form.parentElement.querySelector('.pagination');
+                    if (pagination) pagination.style.display = 'none';
+
+                    const listDiv = form.parentElement.querySelector('div[style*="flex-direction: column"]') || form.parentElement;
+                    listDiv.appendChild(emptyMsg);
+                }
+            } else {
+                if (emptyMsg) emptyMsg.remove();
+                const pagination = form.parentElement.querySelector('.pagination');
+                if (pagination) pagination.style.display = '';
+            }
         }
     });
 }
@@ -186,46 +186,6 @@ async function loadPage(url, pushState = true) {
     } finally {
         if (typeof NProgress !== 'undefined') NProgress.done();
         document.body.classList.remove('turbo-loading');
-    }
-}
-
-async function loadSearchPage(url, activeInputName, activeInputId, selectionStart, selectionEnd) {
-    console.log('[SPA Search] Fetching URL:', url);
-    if (typeof NProgress !== 'undefined') NProgress.start();
-
-    try {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error('Search request failed');
-        
-        const html = await response.text();
-        console.log('[SPA Search] Fetch response received, swapping content...');
-        swapContent(html);
-
-        // Update URL state using replaceState to avoid cluttering browser history stack with each character typed
-        history.replaceState(null, '', url);
-
-        // Restore focus to the search input field
-        let restoredInput = null;
-        if (activeInputId) {
-            restoredInput = document.getElementById(activeInputId);
-        }
-        if (!restoredInput && activeInputName) {
-            restoredInput = document.querySelector(`input[name="${activeInputName}"]`);
-        }
-
-        console.log('[SPA Search] Restoring focus to input:', restoredInput);
-        if (restoredInput) {
-            restoredInput.focus();
-            try {
-                restoredInput.setSelectionRange(selectionStart, selectionEnd);
-            } catch (err) {
-                // ignore
-            }
-        }
-    } catch (error) {
-        console.error('[SPA Search] Search swap error:', error);
-    } finally {
-        if (typeof NProgress !== 'undefined') NProgress.done();
     }
 }
 
