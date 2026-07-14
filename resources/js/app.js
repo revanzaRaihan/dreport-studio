@@ -57,65 +57,177 @@ document.addEventListener('turbo:before-cache', () => {
     });
 });
 
-// ── NProgress config & Turbo integrations ────────────────
+// ── NProgress config ─────────────────────────────────────
 if (typeof NProgress !== 'undefined') {
     NProgress.configure({ showSpinner: false, speed: 300, minimum: 0.08 });
+}
 
-    let visitInProgress = false;
+// ── SPA AJAX Swapper Engine ──────────────────────────────
+function initSpaEngine() {
+    // Intercept navigation clicks
+    document.addEventListener('click', e => {
+        const link = e.target.closest('a');
+        if (!link) return;
 
-    document.addEventListener('turbo:before-visit', e => {
-        if (visitInProgress) {
-            e.preventDefault();
-            e.stopImmediatePropagation();
+        // Skip target="_blank", external links, hashes, javascript:, non-spa links
+        const href = link.getAttribute('href');
+        if (link.target === '_blank' || 
+            !href ||
+            link.hostname !== window.location.hostname || 
+            href.startsWith('#') || 
+            href.startsWith('javascript:') ||
+            link.classList.contains('no-spa')) {
             return;
         }
-        visitInProgress = true;
-        document.body.classList.add('turbo-loading');
+
+        e.preventDefault();
+        navigateTo(link.href);
     });
 
-    document.addEventListener('turbo:visit', () => NProgress.start());
-    document.addEventListener('turbo:submit-start', () => NProgress.start());
-    
-    document.addEventListener('turbo:load', () => {
-        NProgress.done();
-        visitInProgress = false;
-        document.body.classList.remove('turbo-loading');
+    // Handle browser back/forward buttons
+    window.addEventListener('popstate', () => {
+        loadPage(window.location.href, false);
     });
 
-    document.addEventListener('turbo:request-end', () => {
-        visitInProgress = false;
-        document.body.classList.remove('turbo-loading');
+    // Intercept form submissions
+    document.addEventListener('submit', e => {
+        const form = e.target;
+        if (form.classList.contains('no-spa') || form.getAttribute('action') === '/logout') return;
+
+        e.preventDefault();
+        submitForm(form);
     });
 }
 
-// Prevent double submission of forms
-document.addEventListener('submit', e => {
-    const form = e.target;
-    if (form.dataset.submitting) {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        return;
-    }
-    form.dataset.submitting = 'true';
-});
+function navigateTo(url) {
+    loadPage(url, true);
+}
 
-// Add loading state to form submit buttons
-document.addEventListener('turbo:submit-start', e => {
-    const btn = e.target.querySelector('[type="submit"]');
-    if (btn) {
-        btn.classList.add('btn-loading');
-        btn.disabled = true;
-    }
-});
+async function loadPage(url, pushState = true) {
+    if (typeof NProgress !== 'undefined') NProgress.start();
+    document.body.classList.add('turbo-loading');
 
-document.addEventListener('turbo:submit-end', e => {
-    const form = e.target;
-    delete form.dataset.submitting;
-    const btn = form.querySelector('[type="submit"]');
-    if (btn) {
-        btn.classList.remove('btn-loading');
-        btn.disabled = false;
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Network response was not ok');
+        
+        const html = await response.text();
+        swapContent(html);
+
+        if (pushState) {
+            history.pushState(null, '', url);
+        }
+    } catch (error) {
+        console.error('SPA load error:', error);
+        window.location.href = url; // fallback to full reload
+    } finally {
+        if (typeof NProgress !== 'undefined') NProgress.done();
+        document.body.classList.remove('turbo-loading');
     }
+}
+
+async function submitForm(form) {
+    if (typeof NProgress !== 'undefined') NProgress.start();
+    
+    // Set submit button loading state
+    const submitBtn = form.querySelector('[type="submit"]');
+    if (submitBtn) {
+        submitBtn.classList.add('btn-loading');
+        submitBtn.disabled = true;
+    }
+
+    const action = form.getAttribute('action') || window.location.href;
+    const method = (form.getAttribute('method') || 'POST').toUpperCase();
+    
+    // Build request options
+    const options = {
+        method: method === 'GET' ? 'GET' : 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    };
+
+    if (method !== 'GET') {
+        options.body = new FormData(form);
+    }
+
+    try {
+        const response = await fetch(action, options);
+        if (!response.ok) throw new Error('Form submit error');
+
+        const finalUrl = response.redirected ? response.url : response.headers.get('X-Redirect') || window.location.href;
+        const html = await response.text();
+        
+        swapContent(html);
+        
+        // Update URL if redirected
+        if (response.redirected) {
+            history.pushState(null, '', finalUrl);
+        }
+    } catch (error) {
+        console.error('SPA form submit error:', error);
+        // Fallback: standard submit if something goes wrong
+        form.submit();
+    } finally {
+        if (typeof NProgress !== 'undefined') NProgress.done();
+        if (submitBtn) {
+            submitBtn.classList.remove('btn-loading');
+            submitBtn.disabled = false;
+        }
+    }
+}
+
+function swapContent(htmlString) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlString, 'text/html');
+    
+    const newApp = doc.querySelector('.app');
+    const currentApp = document.querySelector('.app');
+    
+    if (newApp && currentApp) {
+        // Find success/error alerts in the new HTML
+        const successAlert = newApp.querySelector('.alert-success');
+        const dangerAlert = newApp.querySelector('.alert-danger');
+
+        if (successAlert) {
+            const msg = successAlert.textContent.trim();
+            successAlert.remove(); // hide from displaying static banner
+            window.showToast(msg);
+        } else if (dangerAlert) {
+            const msg = dangerAlert.textContent.trim();
+            dangerAlert.remove();
+            window.showToast(msg);
+        }
+
+        // Swap app wrapper content
+        currentApp.innerHTML = newApp.innerHTML;
+        
+        // Close modals if any are open
+        const modals = document.querySelectorAll('.modal-backdrop');
+        modals.forEach(modal => modal.classList.remove('show'));
+        
+        // Re-dispatch turbo:load to re-initialize scripts
+        document.dispatchEvent(new Event('turbo:load'));
+    } else {
+        // Fallback
+        window.location.reload();
+    }
+}
+
+// Start the SPA Engine
+initSpaEngine();
+
+// Fire initial turbo:load event on first load
+document.addEventListener('DOMContentLoaded', () => {
+    // Check if there are any alert notifications on first page load
+    const initialAlert = document.querySelector('.alert-success');
+    if (initialAlert) {
+        const msg = initialAlert.textContent.trim();
+        initialAlert.remove();
+        window.showToast(msg);
+    }
+    
+    document.dispatchEvent(new Event('turbo:load'));
 });
 
 // ── Toast ─────────────────────────────────────────────────

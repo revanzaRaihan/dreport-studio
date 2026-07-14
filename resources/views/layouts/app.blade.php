@@ -249,8 +249,7 @@
     </style>
     @yield('styles')
 
-    <!-- Hotwire Turbo -->
-    <script src="https://cdn.jsdelivr.net/npm/@hotwired/turbo@8.0.5/dist/turbo.es2017-umd.js"></script>
+
 
     <!-- JS Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js"></script>
