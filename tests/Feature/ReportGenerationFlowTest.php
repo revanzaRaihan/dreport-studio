@@ -137,41 +137,6 @@ class ReportGenerationFlowTest extends TestCase
     }
 
     /**
-     * Test Dataset Entry Batch Delete.
-     */
-    public function test_dataset_batch_delete(): void
-    {
-        $this->actingAs($this->user);
-
-        // Create General entry
-        $entry1 = DatasetEntry::create([
-            'body' => 'Contoh general dataset body',
-            'language' => 'id',
-            'section_type' => 'overview'
-        ]);
-
-        // Create Rec entry
-        $entry2 = \App\Models\RecommendationDataset::create([
-            'body' => 'Contoh recommendation dataset body',
-            'language' => 'id',
-            'category' => 'coding_dasar'
-        ]);
-
-        // 1. Delete batch with empty IDs
-        $response = $this->delete('/dataset/batch-delete', ['ids' => []]);
-        $response->assertRedirect('/dataset');
-        $response->assertSessionHas('error');
-
-        // 2. Delete batch with valid IDs
-        $response = $this->delete('/dataset/batch-delete', ['ids' => [$entry1->id, $entry2->id]]);
-        $response->assertRedirect('/dataset');
-        $response->assertSessionHas('success');
-
-        $this->assertDatabaseMissing('dataset_entries', ['id' => $entry1->id]);
-        $this->assertDatabaseMissing('recommendation_datasets', ['id' => $entry2->id]);
-    }
-
-    /**
      * Test Report Generation and Storage.
      */
     public function test_report_generation_and_storage(): void
