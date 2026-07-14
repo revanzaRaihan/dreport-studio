@@ -8,6 +8,7 @@ use App\Models\Report;
 use App\Models\DatasetEntry;
 use App\Services\Ai\AiReportGeneratorInterface;
 use App\Actions\Report\BuildAiPrompt;
+use App\Actions\Report\GenerateReportAction;
 use App\Http\Requests\Report\GenerateReportRequest;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -31,10 +32,54 @@ class ReportController extends Controller
     {
         \App\Services\Schedule\PendingReportService::sync();
 
-        $students = Student::orderBy('name')->get();
+        $students = Student::with('schedules')->orderBy('name')->get();
         
         // Calculate dynamic meeting numbers mapped by student ID
-        $meetingNumbers = $students->mapWithKeys(fn($s) => [$s->id => $s->meeting_count + 1]);
+        $latestReports = Report::select('student_id', 'meeting_number', 'report_date')
+            ->whereIn('student_id', $students->pluck('id'))
+            ->orderBy('report_date', 'desc')
+            ->orderBy('meeting_number', 'desc')
+            ->get()
+            ->unique('student_id')
+            ->keyBy('student_id');
+
+        $meetingNumbers = $students->mapWithKeys(function ($s) use ($latestReports) {
+            $lastReport = $latestReports->get($s->id);
+            $nextMeeting = $lastReport ? $lastReport->meeting_number + 1 : $s->meeting_count + 1;
+            return [$s->id => $nextMeeting];
+        });
+
+        // Calculate next scheduled dates mapped by student ID
+        $nextDates = $students->mapWithKeys(function ($s) use ($latestReports) {
+            $lastReport = $latestReports->get($s->id);
+            $nextDate = null;
+
+            if ($lastReport) {
+                $lastDate = \Carbon\Carbon::parse($lastReport->report_date);
+                if ($s->schedules->isNotEmpty()) {
+                    $scheduleDays = $s->schedules->pluck('day_of_week')->map(fn($d) => (int)$d)->toArray();
+                    $checkDate = $lastDate->copy()->addDay();
+                    for ($i = 0; $i < 14; $i++) {
+                        if (in_array($checkDate->dayOfWeekIso, $scheduleDays)) {
+                            $nextDate = $checkDate->format('Y-m-d');
+                            break;
+                        }
+                        $checkDate->addDay();
+                    }
+                }
+                if (!$nextDate) {
+                    $nextDate = $lastDate->copy()->addWeek()->format('Y-m-d');
+                }
+            } else {
+                if ($s->first_meeting_date) {
+                    $nextDate = \Carbon\Carbon::parse($s->first_meeting_date)->format('Y-m-d');
+                } else {
+                    $nextDate = \Carbon\Carbon::today()->format('Y-m-d');
+                }
+            }
+
+            return [$s->id => $nextDate];
+        });
         
         // Get dataset count for warnings if empty
         $datasetCount = DatasetEntry::count();
@@ -51,15 +96,17 @@ class ReportController extends Controller
                 ]);
             });
 
-        return view('report.generate', compact('students', 'meetingNumbers', 'datasetCount', 'pendingReports'));
+        return view('report.generate', compact('students', 'meetingNumbers', 'nextDates', 'datasetCount', 'pendingReports'));
     }
 
     /**
      * Generate report via AI service.
      */
-    public function generate(GenerateReportRequest $request, BuildAiPrompt $buildPrompt): JsonResponse
-    {
-        // Allow enough time for AI API to respond (Gemini 2.5-flash can be slow on reasoning)
+    public function generate(
+        GenerateReportRequest $request,
+        GenerateReportAction $generateReportAction
+    ): JsonResponse {
+        // Allow enough time for AI API to respond
         set_time_limit(120);
 
         $validated = $request->validated();
@@ -77,8 +124,8 @@ class ReportController extends Controller
         try {
             $student = Student::findOrFail($validated['student_id']);
             
-            // Build prompt
-            $prompt = $buildPrompt->execute(
+            // Execute the action
+            $result = $generateReportAction->execute(
                 $student,
                 $validated['meeting_number'],
                 $validated['report_date'],
@@ -87,12 +134,10 @@ class ReportController extends Controller
                 $language
             );
 
-            // Call AI
-            $outputText = $this->generator->generate($prompt);
-
             return response()->json([
                 'success' => true,
-                'text' => $outputText,
+                'text' => $result['text'],
+                'warning' => $result['warning'],
                 'student_id' => $student->id,
                 'student_name' => $student->name,
                 'subject' => $student->subject,

@@ -46,12 +46,16 @@ class PendingReportService
             // Pre-fetch only necessary columns (excluding heavy content text columns)
             $allReports = Report::select('id', 'student_id', 'report_date', 'meeting_number')
                 ->whereIn('student_id', $studentIds)
+                ->orderBy('report_date', 'desc')
+                ->orderBy('meeting_number', 'desc')
                 ->get()
                 ->groupBy('student_id');
 
             // Pre-fetch only necessary columns for pending reports
-            $allPendingReports = PendingReport::select('id', 'student_id', 'report_date')
+            $allPendingReports = PendingReport::select('id', 'student_id', 'report_date', 'meeting_number')
                 ->whereIn('student_id', $studentIds)
+                ->orderBy('report_date', 'desc')
+                ->orderBy('meeting_number', 'desc')
                 ->get()
                 ->groupBy('student_id');
 
@@ -73,48 +77,38 @@ class PendingReportService
                     return Carbon::parse($p->report_date)->format('Y-m-d');
                 });
 
-                foreach ($student->schedules as $schedule) {
-                    $scheduleDay = (int) $schedule->day_of_week;
+                // Find the last saved report in history (ignore pending reports for reference)
+                $lastReport = $studentReports->first();
 
-                    // Get the student's last saved report in memory
-                    $lastReport = $studentReports->sortByDesc('report_date')->first();
-
-                    if ($lastReport) {
-                        $lastDate = Carbon::parse($lastReport->report_date);
-                        $lastMeeting = (int) $lastReport->meeting_number;
-                        $lastDayIso = $lastDate->dayOfWeekIso;
-
-                        // Calculate initial next date based on schedule day of week
-                        if ($lastDayIso === $scheduleDay) {
-                            $nextDate = $lastDate->copy()->addWeek();
-                        } else {
-                            $carbonDay = $scheduleDay === 7 ? 0 : $scheduleDay;
-                            $nextDate = $lastDate->copy()->next($carbonDay);
-                        }
-                        $nextMeetingNumber = $lastMeeting + 1;
+                // Determine start date and meeting number
+                if ($lastReport) {
+                    $startDate = Carbon::parse($lastReport->report_date);
+                    $startMeetingNumber = (int) $lastReport->meeting_number;
+                } else {
+                    // If no past reports, check first_meeting_date
+                    if ($student->first_meeting_date) {
+                        // Start from the day before first_meeting_date so that first_meeting_date itself is checked in the loop
+                        $startDate = Carbon::parse($student->first_meeting_date)->subDay();
+                        $startMeetingNumber = (int) $student->meeting_count;
                     } else {
-                        // If no past reports, use first_meeting_date if set, otherwise fallback to closest past scheduled day
-                        if ($student->first_meeting_date) {
-                            $nextDate = Carbon::parse($student->first_meeting_date);
-                        } else {
-                            $today = Carbon::today();
-                            $todayIso = $today->dayOfWeekIso;
-
-                            if ($todayIso === $scheduleDay) {
-                                $nextDate = $today->copy();
-                            } else {
-                                $carbonDay = $scheduleDay === 7 ? 0 : $scheduleDay;
-                                $nextDate = $today->copy()->previous($carbonDay);
-                            }
-                        }
-                        $nextMeetingNumber = (int) $student->meeting_count + 1;
+                        // If no first_meeting_date AND no past reports, skip!
+                        continue;
                     }
+                }
 
-                    // Loop weekly to generate pending reports up to today
-                    while ($nextDate->lte(Carbon::today())) {
+                // Compile active schedule days for this student
+                $scheduleDays = $student->schedules->pluck('day_of_week')->map(fn($d) => (int)$d)->toArray();
+
+                // Loop day-by-day from $startDate + 1 day to Carbon::today()
+                $nextDate = $startDate->copy()->addDay();
+                $nextMeetingNumber = $startMeetingNumber + 1;
+
+                while ($nextDate->lte(Carbon::today())) {
+                    $dayOfWeekIso = $nextDate->dayOfWeekIso;
+
+                    if (in_array($dayOfWeekIso, $scheduleDays)) {
                         $dateStr = $nextDate->format('Y-m-d');
 
-                        // Check in-memory lists
                         $reportExists = $reportsByDate->has($dateStr);
                         $pendingExists = $pendingByDate->has($dateStr);
 
@@ -125,14 +119,14 @@ class PendingReportService
                                 'report_date' => $dateStr,
                             ]);
 
-                            // Cache the newly created pending report to prevent double creation on other schedules of same student
+                            // Cache to prevent double creation on other code logic
                             $pendingByDate->put($dateStr, $newPending);
                         }
 
-                        // Advance by 7 days
-                        $nextDate->addWeek();
                         $nextMeetingNumber++;
                     }
+
+                    $nextDate->addDay();
                 }
             }
 

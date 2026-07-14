@@ -19,6 +19,7 @@ class SettingsController extends Controller
         $model = AppSetting::getValue('ai_model', 'gemini-2.5-flash');
         $apiKey = AppSetting::getValue('ai_api_key', '');
         $waNumber = AppSetting::getValue('admin_wa_number', '');
+        $locale = AppSetting::getValue('app_locale', 'id');
 
         // Mask the API key for security in UI
         $maskedKey = '';
@@ -31,7 +32,7 @@ class SettingsController extends Controller
             }
         }
 
-        return view('settings.index', compact('provider', 'model', 'maskedKey', 'waNumber'));
+        return view('settings.index', compact('provider', 'model', 'maskedKey', 'waNumber', 'locale'));
     }
 
     /**
@@ -44,6 +45,7 @@ class SettingsController extends Controller
         AppSetting::setValue('ai_provider', $validated['ai_provider']);
         AppSetting::setValue('ai_model', $validated['ai_model']);
         AppSetting::setValue('admin_wa_number', $validated['admin_wa_number'] ?? '');
+        AppSetting::setValue('app_locale', $validated['app_locale']);
 
         $submittedKey = $validated['ai_api_key'];
         

@@ -16,6 +16,8 @@ class StoreDatasetRequest extends FormRequest
         return [
             'body' => ['required', 'string'],
             'language' => ['required', 'string', 'in:id,en'],
+            'section_type' => ['nullable', 'string', 'in:overview,teachers_note,training_recommendation,parent_note'],
+            'category' => ['nullable', 'required_if:section_type,training_recommendation', 'string', 'in:kreativitas,logika_terstruktur,eksperimen,coding_dasar'],
         ];
     }
 }

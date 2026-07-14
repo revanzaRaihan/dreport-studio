@@ -61,7 +61,12 @@ class HistoryController extends Controller
     public function destroy(Report $report): RedirectResponse
     {
         $studentId = $report->student_id;
+        $student = $report->student;
         $report->delete();
+
+        if ($student && $student->meeting_count > 0) {
+            $student->decrement('meeting_count');
+        }
 
         $redirect = $studentId
             ? route('history.student', $studentId)

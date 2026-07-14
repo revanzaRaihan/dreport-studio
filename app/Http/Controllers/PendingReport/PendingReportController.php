@@ -33,7 +33,7 @@ class PendingReportController extends Controller
             ->with(['pendingReports' => function ($q) {
                 $q->orderBy('report_date', 'asc');
             }])
-            ->paginate(10)
+            ->paginate(5)
             ->withQueryString();
 
         // Get all students for the dropdown select in the form

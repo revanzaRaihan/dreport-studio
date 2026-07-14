@@ -11,7 +11,7 @@ use App\Services\Ai\AiReportGeneratorInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-class ReportStudioTest extends TestCase
+class ReportGenerationFlowTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -156,10 +156,26 @@ class ReportStudioTest extends TestCase
 
         // Mock the AI Report Generator Interface
         $this->mock(AiReportGeneratorInterface::class, function ($mock) {
+            $mock->shouldReceive('classifyCategory')
+                 ->andReturn('logika_terstruktur');
+
             $mock->shouldReceive('generate')
                  ->once()
-                 ->andReturn('Ini adalah konten hasil generate AI.');
+                 ->andReturn(new \App\DataTransferObjects\ReportSections(
+                     'Renziro hari ini belajar database migrations dengan sangat baik.',
+                     'Anak menunjukkan fokus tinggi dan kemajuan pesat dalam memahami konsep database.',
+                     'Untuk latihan di rumah, disarankan membuat relasi migration sederhana.',
+                     'Orang tua diimbau mendampingi Renziro saat mencoba membuat relasi table.'
+                 ));
         });
+
+        $expectedText = "09/07/2026\n\n" .
+                        "Javascript Developer Meeting 6. Renziro Lesson 6\n\n" .
+                        "Renziro hari ini belajar database migrations dengan sangat baik.\n\n" .
+                        "-\n\n" .
+                        "Anak menunjukkan fokus tinggi dan kemajuan pesat dalam memahami konsep database.\n\n" .
+                        "Untuk latihan di rumah, disarankan membuat relasi migration sederhana.\n\n" .
+                        "Orang tua diimbau mendampingi Renziro saat mencoba membuat relasi table.";
 
         // 1. Generate Report JSON endpoint
         $response = $this->postJson('/reports/generate', [
@@ -173,7 +189,7 @@ class ReportStudioTest extends TestCase
         $response->assertOk();
         $response->assertJson([
             'success' => true,
-            'text' => 'Ini adalah konten hasil generate AI.',
+            'text' => $expectedText,
             'student_id' => $student->id,
             'meeting_number' => '6'
         ]);
@@ -185,7 +201,7 @@ class ReportStudioTest extends TestCase
             'report_date' => '2026-07-09',
             'materi' => 'Database migrations',
             'behavior' => 'Sangat memahami penjelasan dengan baik',
-            'content' => 'Ini adalah konten hasil generate AI.'
+            'content' => $expectedText
         ]);
 
         $response->assertRedirect('/');
@@ -194,7 +210,7 @@ class ReportStudioTest extends TestCase
             'student_name' => 'Renziro',
             'subject' => 'Javascript Developer',
             'meeting_number' => 6,
-            'content' => 'Ini adalah konten hasil generate AI.'
+            'content' => $expectedText
         ]);
 
         // Confirm meeting count incremented
@@ -490,11 +506,28 @@ class ReportStudioTest extends TestCase
 
         $schedule->students()->attach($student->id);
 
-        // Run sync
+        // Run sync - should do nothing because there's no first_meeting_date and no history
+        \App\Services\Schedule\PendingReportService::sync();
+        $this->assertEquals(0, \App\Models\PendingReport::where('student_id', $student->id)->count());
+
+        // Create one past report manually to establish reference history (Wednesday July 1, 2026 - Meeting 2)
+        Report::create([
+            'student_id' => $student->id,
+            'student_name' => $student->name,
+            'subject' => $student->subject,
+            'meeting_number' => 2,
+            'report_date' => '2026-07-01',
+            'materi' => 'Introduction',
+            'behavior' => 'Good',
+            'content' => 'Laporan sesi 2'
+        ]);
+
+        // Clear cache and run sync again
+        \App\Services\Schedule\PendingReportService::clearCache();
         \App\Services\Schedule\PendingReportService::sync();
 
-        // The closest past Wednesday relative to Sunday July 12, 2026 is Wednesday July 8, 2026.
-        // There should be an automatic pending report for Wednesday July 8, 2026 (Meeting 3)
+        // The closest Wednesday after July 1 up to July 12 is Wednesday July 8, 2026.
+        // It should generate a pending report for Wednesday July 8 (Meeting 3)
         $pending = \App\Models\PendingReport::where('student_id', $student->id)->first();
         $this->assertNotNull($pending);
         $this->assertEquals(3, $pending->meeting_number);
@@ -557,12 +590,13 @@ class ReportStudioTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        // Update provider, model, key and WA number
+        // Update provider, model, key, WA number and locale
         $response = $this->put('/settings', [
             'ai_provider' => 'groq',
             'ai_model' => 'llama3-8b-8192',
             'ai_api_key' => 'new-secret-api-key',
-            'admin_wa_number' => '628123456789'
+            'admin_wa_number' => '628123456789',
+            'app_locale' => 'en'
         ]);
 
         $response->assertRedirect('/settings');
@@ -571,6 +605,7 @@ class ReportStudioTest extends TestCase
         $this->assertEquals('llama3-8b-8192', AppSetting::getValue('ai_model'));
         $this->assertEquals('new-secret-api-key', AppSetting::getValue('ai_api_key'));
         $this->assertEquals('628123456789', AppSetting::getValue('admin_wa_number'));
+        $this->assertEquals('en', AppSetting::getValue('app_locale'));
     }
 
     /**
@@ -634,6 +669,41 @@ class ReportStudioTest extends TestCase
         $response->assertStatus(422);
         $response->assertJsonFragment([
             'message' => 'Silakan tambah minimal 1 contoh di tab Dataset Gaya untuk Bahasa Inggris biar AI tahu gaya nulis kamu.'
+        ]);
+    }
+
+    /**
+     * Test structured dataset storage and refactored report generation.
+     */
+    public function test_structured_dataset_storage_and_refactored_generation(): void
+    {
+        $this->actingAs($this->user);
+
+        // 1. Store dataset entry with section_type = teachers_note
+        $response = $this->post('/dataset', [
+            'body' => 'Gaya catatan guru yang unik.',
+            'language' => 'id',
+            'section_type' => 'teachers_note'
+        ]);
+        $response->assertRedirect('/dataset');
+        $this->assertDatabaseHas('dataset_entries', [
+            'body' => 'Gaya catatan guru yang unik.',
+            'language' => 'id',
+            'section_type' => 'teachers_note'
+        ]);
+
+        // 2. Store recommendation dataset entry
+        $responseRec = $this->post('/dataset', [
+            'body' => 'Latihan kreativitas di rumah.',
+            'language' => 'id',
+            'section_type' => 'training_recommendation',
+            'category' => 'kreativitas'
+        ]);
+        $responseRec->assertRedirect('/dataset');
+        $this->assertDatabaseHas('recommendation_datasets', [
+            'body' => 'Latihan kreativitas di rumah.',
+            'language' => 'id',
+            'category' => 'kreativitas'
         ]);
     }
 }

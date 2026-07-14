@@ -3,36 +3,8 @@
 @section('page_title', 'Jadwal Belajar Mingguan')
 @section('page_description', 'Atur jadwal sesi kelas rutin mingguan untuk otomatisasi antrean laporan.')
 
-@section('styles')
-<style>
-    /* Premium Row-Based Schedule Styling */
-    .schedule-rows {
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-        margin-top: 20px;
-    }
-    .day-row {
-        background: #FDFCF8;
-        border: 1.5px solid var(--line, #E4DCCE);
-        border-radius: 10px;
-        padding: 16px;
-        transition: all 0.2s ease;
-    }
-    .day-row:hover {
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
-    }
-    .sessions-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-        gap: 12px;
-        margin-top: 10px;
-    }
-</style>
-@endsection
-
 @section('content')
-<section class="panel active">
+<section class="panel active" id="tab-jadwal">
     <!-- Tambah Jadwal Card (Top Section) -->
     <div class="card" style="padding: 24px; margin-bottom: 24px;">
         <h2>Tambah Jadwal Sesi Les</h2>
@@ -167,12 +139,7 @@
                                                 data-students="{{ json_encode($sched->students->pluck('id')) }}">
                                             Edit
                                         </button>
-                                        
-                                        <form action="{{ route('schedule.destroy', $sched->id) }}" method="POST" onsubmit="return confirm('Hapus jadwal sesi ini?')" style="margin:0;">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn danger" style="padding: 4px 8px; font-size: 11px;">Hapus</button>
-                                        </form>
+                                        <button type="button" class="btn danger" style="padding: 4px 8px; font-size: 11px;" onclick="openDeleteModal('{{ route('schedule.destroy', $sched->id) }}', 'Apakah Anda yakin ingin menghapus jadwal sesi ini?')">Hapus</button>
                                     </div>
                                 </div>
                             @endforeach
@@ -255,116 +222,4 @@
 </div>
 @endsection
 
-@section('scripts')
-<script>
-    // --- Add Form Student Search & Filter ---
-    const studentSearch = document.getElementById('studentSearch');
-    const subjectFilter = document.getElementById('subjectFilter');
-    const studentItems = document.querySelectorAll('.student-checkbox-item');
 
-    function filterStudents() {
-        const query = studentSearch.value.toLowerCase().trim();
-        const selectedSubject = subjectFilter.value;
-
-        studentItems.forEach(item => {
-            const name = item.dataset.name.toLowerCase();
-            const subject = item.dataset.subject;
-
-            const matchesQuery = name.includes(query);
-            const matchesSubject = !selectedSubject || subject === selectedSubject;
-
-            if (matchesQuery && matchesSubject) {
-                item.style.display = 'flex';
-            } else {
-                item.style.display = 'none';
-            }
-        });
-    }
-
-    if (studentSearch && subjectFilter) {
-        studentSearch.addEventListener('input', filterStudents);
-        subjectFilter.addEventListener('change', filterStudents);
-    }
-
-    // --- Edit Form Student Search & Filter ---
-    const editStudentSearch = document.getElementById('editStudentSearch');
-    const editSubjectFilter = document.getElementById('editSubjectFilter');
-    const editStudentItems = document.querySelectorAll('.edit-student-checkbox-item');
-
-    function filterEditStudents() {
-        const query = editStudentSearch.value.toLowerCase().trim();
-        const selectedSubject = editSubjectFilter.value;
-
-        editStudentItems.forEach(item => {
-            const name = item.dataset.name.toLowerCase();
-            const subject = item.dataset.subject;
-
-            const matchesQuery = name.includes(query);
-            const matchesSubject = !selectedSubject || subject === selectedSubject;
-
-            if (matchesQuery && matchesSubject) {
-                item.style.display = 'flex';
-            } else {
-                item.style.display = 'none';
-            }
-        });
-    }
-
-    if (editStudentSearch && editSubjectFilter) {
-        editStudentSearch.addEventListener('input', filterEditStudents);
-        editSubjectFilter.addEventListener('change', filterEditStudents);
-    }
-
-    // --- Edit Schedule Modal Controls ---
-    const editModal = document.getElementById('editScheduleModal');
-    const editForm = document.getElementById('editScheduleForm');
-    const editDayOfWeek = document.getElementById('editDayOfWeek');
-    const editStartTime = document.getElementById('editStartTime');
-    const editEndTime = document.getElementById('editEndTime');
-    const editLabel = document.getElementById('editLabel');
-    const editCheckboxes = document.querySelectorAll('.edit-student-checkbox');
-
-    function openEditModal(id, day, start, end, label, studentIds) {
-        editForm.action = `/schedule/${id}`;
-        editDayOfWeek.value = day;
-        editStartTime.value = start;
-        editEndTime.value = end;
-        editLabel.value = label || '';
-
-        // Reset search/filter fields when opening
-        if (editStudentSearch) editStudentSearch.value = '';
-        if (editSubjectFilter) editSubjectFilter.value = '';
-        filterEditStudents();
-
-        // Reset and check boxes
-        editCheckboxes.forEach(cb => {
-            cb.checked = studentIds.includes(cb.value);
-        });
-
-        editModal.classList.add('show');
-    }
-
-    function closeEditModal() {
-        editModal.classList.remove('show');
-    }
-
-    editModal.addEventListener('click', function(e) {
-        if (e.target === editModal) {
-            closeEditModal();
-        }
-    });
-
-    document.querySelectorAll('.btn-edit-sched').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const id = this.dataset.id;
-            const day = this.dataset.day;
-            const start = this.dataset.start;
-            const end = this.dataset.end;
-            const label = this.dataset.label;
-            const studentIds = JSON.parse(this.dataset.students || '[]');
-
-            openEditModal(id, day, start, end, label, studentIds);
-        });
-    });
-</script>
-@endsection

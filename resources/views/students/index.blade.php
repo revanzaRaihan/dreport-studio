@@ -3,40 +3,7 @@
 @section('page_title', 'Manajemen Murid')
 @section('page_description', 'Kelola data murid, mata pelajaran, dan parameter awal pembelajaran.')
 
-@section('styles')
-<style>
-    /* Premium Grid Layout for Students Page */
-    .students-grid {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 24px;
-        align-items: start;
-    }
-    
-    @media (min-width: 992px) {
-        .students-grid {
-            grid-template-columns: 0.85fr 1.15fr;
-            gap: 32px;
-        }
-    }
 
-    /* Dashed parameter block */
-    .param-block {
-        background: #FCFAF6;
-        border: 1px dashed var(--line, #E4DCCE);
-        padding: 16px;
-        border-radius: 8px;
-        margin-bottom: 20px;
-    }
-
-    .param-row {
-        display: grid;
-        grid-template-columns: 1fr 1.2fr;
-        gap: 12px;
-        margin-bottom: 12px;
-    }
-</style>
-@endsection
 
 @section('content')
 <section class="panel active" id="tab-murid">
@@ -131,12 +98,7 @@
                                 <span class="badge" style="font-size: 11px; padding: 2px 6px; border-radius: 4px;">M{{ $student->meeting_count + 1 }} berikutnya</span>
                                 <a href="{{ route('history.student', $student->id) }}" class="btn secondary" style="padding: 6px 10px; font-size: 12px; text-decoration: none;">Riwayat</a>
                                 <button class="btn secondary" style="padding: 6px 10px; font-size: 12px;" onclick="openEditModal('{{ $student->id }}', '{{ addslashes($student->name) }}', '{{ addslashes($student->subject) }}', {{ $student->meeting_count }}, '{{ $student->first_meeting_date ? $student->first_meeting_date->format('Y-m-d') : '' }}')">Edit</button>
-                                
-                                <form action="{{ route('students.destroy', $student->id) }}" method="POST" onsubmit="return confirm('Hapus murid ini? Riwayat laporannya tetap tersimpan.')" style="margin:0;">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn danger" style="padding: 6px 10px; font-size: 12px;">Hapus</button>
-                                </form>
+                                <button type="button" class="btn danger" style="padding: 6px 10px; font-size: 12px;" onclick="openDeleteModal('{{ route('students.destroy', $student->id) }}', 'Hapus murid ini? Riwayat laporannya tetap tersimpan.')">Hapus</button>
                             </div>
                         </div>
                     @endforeach
@@ -185,66 +147,4 @@
 </div>
 @endsection
 
-@section('scripts')
-<script>
-    // ── Subject combobox: Tom Select with create ────────────────
-    document.addEventListener('DOMContentLoaded', () => {
-        document.querySelectorAll('.subject-select').forEach(el => {
-            const ts = new TomSelect(el, {
-                create: true,         // allow typing a brand-new subject
-                maxItems: 1,
-                openOnFocus: true,
-                placeholder: 'Pilih atau ketik mata pelajaran…',
-                createLabel: (input) => `<span>Tambah "<strong>${input}</strong>"</span>`,
-                onItemAdd() { this.blur(); },
-                render: {
-                    no_results: () => '<div class="no-results">Tidak ditemukan — ketik untuk menambah baru.</div>',
-                }
-            });
 
-            // Store reference for the edit modal
-            el._tomSelect = ts;
-        });
-    });
-
-    // ── Edit Modal ──────────────────────────────────────────────
-    const editModal = document.getElementById('editModal');
-    const editForm  = document.getElementById('editForm');
-    const editName  = document.getElementById('editName');
-    const editMeetingCount = document.getElementById('editMeetingCount');
-    const editFirstMeetingDate = document.getElementById('editFirstMeetingDate');
-
-    function openEditModal(id, name, subject, meetingCount, firstMeetingDate) {
-        editName.value = name;
-        editMeetingCount.value = meetingCount;
-        if (editFirstMeetingDate) {
-            editFirstMeetingDate.value = firstMeetingDate || '';
-        }
-        editForm.action = `/students/${id}`;
-
-        // Set the Tom Select value for the edit subject field
-        const editSubjectEl = document.getElementById('editSubject');
-        const ts = editSubjectEl._tomSelect || editSubjectEl.tomselect;
-        if (ts) {
-            // If the subject doesn't exist as an option yet, add it first
-            if (!ts.options[subject]) {
-                ts.addOption({ value: subject, text: subject });
-            }
-            ts.setValue(subject, true); // true = silent (no change event)
-        }
-
-        editModal.classList.add('show');
-    }
-
-    function closeEditModal() {
-        editModal.classList.remove('show');
-    }
-
-    // Close modal if user clicks outside modal-content
-    editModal.addEventListener('click', function(e) {
-        if (e.target === editModal) {
-            closeEditModal();
-        }
-    });
-</script>
-@endsection

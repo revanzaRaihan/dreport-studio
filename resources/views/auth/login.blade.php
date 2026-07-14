@@ -4,63 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login — Report Studio</title>
-    <link rel="stylesheet" href="{{ asset('css/app-custom.css') }}">
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link rel="icon" type="image/png" href="{{ asset('images/icons/favicon/favicon-96x96.png') }}" sizes="96x96" />
     <link rel="icon" type="image/svg+xml" href="{{ asset('images/icons/favicon/favicon.svg') }}" />
     <link rel="shortcut icon" href="{{ asset('images/icons/favicon/favicon.ico') }}" />
     <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('images/icons/favicon/apple-touch-icon.png') }}" />
     <link rel="manifest" href="{{ asset('images/icons/favicon/site.webmanifest') }}" />
-    <style>
-        body {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
-        .login-container {
-            width: 100%;
-            max-width: 400px;
-            animation: fade .22s ease;
-        }
-        .login-logo {
-            text-align: center;
-            margin-bottom: 24px;
-        }
-        .login-logo .mark {
-            font-family: 'JetBrains Mono', monospace;
-            font-weight: 700;
-            background: var(--ink);
-            color: var(--paper);
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-size: 16px;
-            letter-spacing: 0.02em;
-            display: inline-block;
-            margin-bottom: 8px;
-        }
-        .login-logo h1 {
-            font-size: 24px;
-        }
-        .checkbox-container {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 16px;
-            cursor: pointer;
-        }
-        .checkbox-container input {
-            margin: 0;
-            width: auto;
-            cursor: pointer;
-        }
-        .checkbox-container label {
-            margin: 0;
-            font-size: 13px;
-            color: var(--muted);
-            cursor: pointer;
-        }
-    </style>
 </head>
 <body>
 <div class="login-container">

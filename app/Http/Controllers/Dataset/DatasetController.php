@@ -16,19 +16,28 @@ class DatasetController extends Controller
     public function index(): View
     {
         $dataset = DatasetEntry::latest()->get();
-        return view('dataset.index', compact('dataset'));
+        $recommendationDataset = \App\Models\RecommendationDataset::latest()->get();
+        return view('dataset.index', compact('dataset', 'recommendationDataset'));
     }
 
-    /**
-     * Store a newly created dataset entry in storage.
-     */
     public function store(StoreDatasetRequest $request): RedirectResponse
     {
         $validated = $request->validated();
-        DatasetEntry::create([
-            'body' => $validated['body'],
-            'language' => $validated['language']
-        ]);
+        $sectionType = $validated['section_type'] ?? 'overview';
+
+        if ($sectionType === 'training_recommendation') {
+            \App\Models\RecommendationDataset::create([
+                'category' => $validated['category'] ?? 'coding_dasar',
+                'body' => $validated['body'],
+                'language' => $validated['language']
+            ]);
+        } else {
+            DatasetEntry::create([
+                'section_type' => $sectionType,
+                'body' => $validated['body'],
+                'language' => $validated['language']
+            ]);
+        }
 
         return redirect()->route('dataset.index')
             ->with('success', 'Contoh laporan berhasil ditambahkan ke dataset.');
@@ -37,9 +46,26 @@ class DatasetController extends Controller
     /**
      * Remove the specified dataset entry from storage.
      */
-    public function destroy(DatasetEntry $dataset): RedirectResponse
+    public function destroy(string $id): RedirectResponse
     {
-        $dataset->delete();
+        $deleted = false;
+        
+        $entry = DatasetEntry::find($id);
+        if ($entry) {
+            $entry->delete();
+            $deleted = true;
+        } else {
+            $recEntry = \App\Models\RecommendationDataset::find($id);
+            if ($recEntry) {
+                $recEntry->delete();
+                $deleted = true;
+            }
+        }
+
+        if (!$deleted) {
+            return redirect()->route('dataset.index')
+                ->with('error', 'Contoh laporan tidak ditemukan.');
+        }
 
         return redirect()->route('dataset.index')
             ->with('success', 'Contoh laporan berhasil dihapus dari dataset.');

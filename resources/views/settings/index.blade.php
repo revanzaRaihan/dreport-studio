@@ -1,13 +1,13 @@
 @extends('layouts.app')
 
-@section('page_title', 'Pengaturan Aplikasi')
-@section('page_description', 'Konfigurasi kunci API kecerdasan buatan (AI) dan nomor tujuan WhatsApp.')
+@section('page_title', __('Pengaturan Aplikasi'))
+@section('page_description', __('Konfigurasi kunci API kecerdasan buatan (AI) dan nomor tujuan WhatsApp.'))
 
 @section('content')
 <section class="panel active" id="tab-pengaturan">
     <div class="card">
-        <h2>Konfigurasi AI Provider</h2>
-        <p class="desc">API key dan nama model Anda disimpan dengan aman di server backend (Supabase), tidak terekspos ke sisi klien/browser.</p>
+        <h2>{{ __('Konfigurasi AI Provider') }}</h2>
+        <p class="desc">{{ __('API key dan nama model Anda disimpan dengan aman di server backend (Supabase), tidak terekspos ke sisi klien/browser.') }}</p>
         
         <form action="{{ route('settings.update') }}" method="POST">
             @csrf
@@ -20,30 +20,39 @@
             </select>
 
             <label for="apiKey">API Key</label>
-            <input type="password" id="apiKey" name="ai_api_key" value="{{ $maskedKey }}" placeholder="Masukkan API Key baru atau biarkan seperti ini untuk tetap menyimpan yang lama">
+            <input type="password" id="apiKey" name="ai_api_key" value="{{ $maskedKey }}" placeholder="{{ __('Masukkan API Key baru atau biarkan seperti ini untuk tetap menyimpan yang lama') }}">
             <span style="display: block; font-size: 11.5px; color: var(--muted); margin-top: -10px; margin-bottom: 14px;">
-                Catatan: API key disembunyikan demi keamanan. Tulis ulang jika Anda ingin memperbaruinya.
+                {{ __('Catatan: API key disembunyikan demi keamanan. Tulis ulang jika Anda ingin memperbaruinya.') }}
             </span>
 
-            <label for="modelName">Nama Model</label>
+            <label for="modelName">{{ __('Nama Model') }}</label>
             <input type="text" id="modelName" name="ai_model" value="{{ $model }}" placeholder="gemini-2.5-flash" required>
             <p class="desc" id="modelHelpText" style="margin-top:-6px; font-size: 11.5px; margin-bottom: 14px;">
-                Rekomendasi model Gemini: <code>gemini-2.5-flash</code> atau <code>gemini-1.5-flash</code>.
+                {{ __('Rekomendasi model Gemini: <code>gemini-2.5-flash</code> atau <code>gemini-1.5-flash</code>.') }}
             </p>
             
-            <label for="adminWaNumber">Nomor WhatsApp Admin</label>
+            <label for="adminWaNumber">{{ __('Nomor WhatsApp Admin') }}</label>
             <input type="text" id="adminWaNumber" name="admin_wa_number" value="{{ $waNumber }}" placeholder="mis. 628123456789" autocomplete="off">
             <p class="desc" style="margin-top:-6px; font-size: 11.5px; margin-bottom: 20px;">
-                Gunakan format kode negara tanpa karakter '+' atau spasi (mis. <code>628123456789</code>). Jika diisi, tombol Kirim WA akan langsung tertuju ke nomor ini.
+                {!! __('Gunakan format kode negara tanpa karakter \'+\' atau spasi (mis. <code>628123456789</code>). Jika diisi, tombol Kirim WA akan langsung tertuju ke nomor ini.') !!}
             </p>
 
-            <button type="submit" class="btn">Simpan Pengaturan</button>
+            <label for="appLocale">{{ __('Bahasa Aplikasi') }}</label>
+            <select id="appLocale" name="app_locale">
+                <option value="id" {{ $locale === 'id' ? 'selected' : '' }}>Bahasa Indonesia</option>
+                <option value="en" {{ $locale === 'en' ? 'selected' : '' }}>English (Inggris)</option>
+            </select>
+            <p class="desc" style="margin-top:-6px; font-size: 11.5px; margin-bottom: 20px;">
+                {{ __('Pilih bahasa antarmuka aplikasi.') }}
+            </p>
+
+            <button type="submit" class="btn">{{ __('Simpan Pengaturan') }}</button>
         </form>
     </div>
     
     <div class="card">
-        <h2>Informasi Deployment</h2>
-        <p class="desc">Detail deployment hosting Report Studio.</p>
+        <h2>{{ __('Informasi Deployment') }}</h2>
+        <p class="desc">{{ __('Detail deployment hosting Report Studio.') }}</p>
         <div style="font-size: 12.5px; line-height: 1.6; color: var(--ink);">
             <strong>Database:</strong> PostgreSQL Supabase<br>
             <strong>Engine:</strong> Laravel Framework 13.x<br>
@@ -53,37 +62,4 @@
 </section>
 @endsection
 
-@section('scripts')
-<script>
-    function updateModelPlaceholder(provider) {
-        const modelInput = document.getElementById('modelName');
-        const helpText = document.getElementById('modelHelpText');
-        
-        if (provider === 'groq') {
-            modelInput.placeholder = 'llama3-8b-8192';
-            if (modelInput.value === 'gemini-2.5-flash' || modelInput.value === 'gemini-1.5-flash') {
-                modelInput.value = 'llama3-8b-8192';
-            }
-            helpText.innerHTML = 'Rekomendasi model Groq: <code>llama3-8b-8192</code> atau <code>mixtral-8x7b-32768</code>.';
-        } else {
-            modelInput.placeholder = 'gemini-2.5-flash';
-            if (modelInput.value === 'llama3-8b-8192' || modelInput.value === 'mixtral-8x7b-32768') {
-                modelInput.value = 'gemini-2.5-flash';
-            }
-            helpText.innerHTML = 'Rekomendasi model Gemini: <code>gemini-2.5-flash</code> atau <code>gemini-1.5-flash</code>.';
-        }
-    }
 
-    // Wire Tom Select onChange + run once on load to sync UI with saved setting
-    document.addEventListener('DOMContentLoaded', () => {
-        const el = document.getElementById('aiProvider');
-        if (!el) return;
-        updateModelPlaceholder(el.value);               // initial sync
-        requestAnimationFrame(() => {
-            if (el.tomselect) {
-                el.tomselect.on('change', value => updateModelPlaceholder(value));
-            }
-        });
-    });
-</script>
-@endsection

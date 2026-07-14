@@ -1,3 +1,9 @@
+@import './app-custom.css';
+@import './components/report-generator.css';
+@import './components/students.css';
+@import './components/schedule.css';
+@import './components/login.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

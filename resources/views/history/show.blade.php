@@ -12,7 +12,7 @@
 @endsection
 
 @section('content')
-<section class="panel active">
+<section class="panel active" id="tab-riwayat-murid" data-admin-wa-number="{{ $adminWaNumber }}">
     <div class="card">
         {{-- Header --}}
         <div style="display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
@@ -95,13 +95,7 @@
                             Edit
                         </button>
 
-                        <form action="{{ route('history.destroy', $report->id) }}" method="POST"
-                               onsubmit="return confirm('Hapus laporan ini dari riwayat?')" style="margin: 0;">
-                            @csrf
-                            @method('DELETE')
-                            <input type="hidden" name="_redirect" value="{{ route('history.student', $student->id) }}">
-                            <button type="submit" class="btn danger" style="padding: 6px 10px; font-size: 12px;">Hapus</button>
-                        </form>
+                        <button type="button" class="btn danger" style="padding: 6px 10px; font-size: 12px;" onclick="openDeleteModal('{{ route('history.destroy', $report->id) }}', 'Apakah Anda yakin ingin menghapus laporan ini dari riwayat?')">Hapus</button>
                     </div>
                 </div>
             @endforeach
@@ -159,92 +153,4 @@
 </div>
 @endsection
 
-@section('scripts')
-<script>
-    const adminWaNumber = @json($adminWaNumber);
 
-    function copyText(text) {
-        navigator.clipboard.writeText(text)
-            .then(() => showToast('Disalin ke clipboard'))
-            .catch(() => showToast('Gagal menyalin. Silakan copy manual.'));
-    }
-
-    document.querySelectorAll('.btn-wa').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const meeting = this.dataset.meeting;
-            const date = this.dataset.date;
-            const materi = this.dataset.materi;
-            const behavior = this.dataset.behavior;
-            const content = this.dataset.content;
-            const imageUrl = this.dataset.image;
-
-            // Format message: langsung kirim teks laporan asli tanpa format tambahan
-            let message = content;
-
-            const encodedText = encodeURIComponent(message);
-            
-            let waUrl = `whatsapp://send?text=${encodedText}`;
-            if (adminWaNumber) {
-                const cleanPhone = adminWaNumber.replace(/\D/g, '');
-                waUrl = `whatsapp://send?phone=${cleanPhone}&text=${encodedText}`;
-            }
-
-            window.open(waUrl, '_blank');
-        });
-    });
-
-    // --- Edit Modal Controls ---
-    const editModal = document.getElementById('editReportModal');
-    const editForm = document.getElementById('editReportForm');
-    const editMeetingNumber = document.getElementById('editMeetingNumber');
-    const editReportDate = document.getElementById('editReportDate');
-    const editMateri = document.getElementById('editMateri');
-    const editBehavior = document.getElementById('editBehavior');
-    const editContent = document.getElementById('editContent');
-    const editImagePreviewWrapper = document.getElementById('editImagePreviewWrapper');
-    const editImagePreview = document.getElementById('editImagePreview');
-
-    function openEditModal(id, meeting, date, materi, behavior, content, imageUrl) {
-        editForm.action = `/reports/${id}`;
-        editMeetingNumber.value = meeting;
-        editReportDate.value = date;
-        editMateri.value = materi;
-        editBehavior.value = behavior;
-        editContent.value = content;
-
-        if (imageUrl && imageUrl !== 'null' && imageUrl !== '') {
-            editImagePreview.src = imageUrl;
-            editImagePreviewWrapper.style.display = 'block';
-        } else {
-            editImagePreview.src = '';
-            editImagePreviewWrapper.style.display = 'none';
-        }
-
-        editModal.classList.add('show');
-    }
-
-    function closeEditModal() {
-        editModal.classList.remove('show');
-    }
-
-    editModal.addEventListener('click', function(e) {
-        if (e.target === editModal) {
-            closeEditModal();
-        }
-    });
-
-    document.querySelectorAll('.btn-edit').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const id = this.dataset.id;
-            const meeting = this.dataset.meeting;
-            const date = this.dataset.date;
-            const materi = this.dataset.materi;
-            const behavior = this.dataset.behavior;
-            const content = this.dataset.content;
-            const image = this.dataset.image;
-
-            openEditModal(id, meeting, date, materi, behavior, content, image);
-        });
-    });
-</script>
-@endsection

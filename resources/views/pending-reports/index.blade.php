@@ -80,13 +80,11 @@
                                     Pertemuan Ke-<strong style="color: var(--teal, #2F8F7E);">{{ $pending->meeting_number }}</strong> · Tanggal: <span style="font-weight: 500;">{{ $pending->report_date ? $pending->report_date->format('d M Y') : '-' }}</span>
                                 </div>
                                 <div style="display: flex; gap: 6px; align-items: center; flex-shrink: 0;">
+                                    <a href="{{ route('report.index') }}?student_id={{ $pending->student_id }}&pending_report_id={{ $pending->id }}" class="btn" style="padding: 4px 8px; font-size: 11.5px; text-decoration: none; display: inline-block;">Tulis Laporan</a>
+                                    
                                     <button class="btn secondary" style="padding: 4px 8px; font-size: 11.5px;" onclick="openEditModal('{{ $pending->id }}', '{{ $pending->student_id }}', {{ $pending->meeting_number }}, '{{ $pending->report_date ? $pending->report_date->format('Y-m-d') : '' }}')">Edit</button>
                                     
-                                    <form action="{{ route('pending-reports.destroy', $pending->id) }}" method="POST" onsubmit="return confirm('Hapus listing report ini?')" style="margin:0;">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn danger" style="padding: 4px 8px; font-size: 11.5px;">Hapus</button>
-                                    </form>
+                                    <button type="button" class="btn danger" style="padding: 4px 8px; font-size: 11.5px;" onclick="openDeleteModal('{{ route('pending-reports.destroy', $pending->id) }}', 'Hapus listing report ini?')">Hapus</button>
                                 </div>
                             </div>
                         @endforeach
@@ -132,38 +130,4 @@
 </div>
 @endsection
 
-@section('scripts')
-<script>
-    const editModal = document.getElementById('editModal');
-    const editForm  = document.getElementById('editForm');
-    const editStudentId = document.getElementById('editStudentId');
-    const editMeetingNumber = document.getElementById('editMeetingNumber');
-    const editReportDate = document.getElementById('editReportDate');
 
-    function openEditModal(id, studentId, meetingNumber, reportDate) {
-        editMeetingNumber.value = meetingNumber;
-        editReportDate.value = reportDate;
-        editForm.action = `/pending-reports/${id}`;
-
-        // Handle Tom Select for student_id dropdown in edit modal
-        const ts = editStudentId.tomselect;
-        if (ts) {
-            ts.setValue(studentId, true);
-        } else {
-            editStudentId.value = studentId;
-        }
-
-        editModal.classList.add('show');
-    }
-
-    function closeEditModal() {
-        editModal.classList.remove('show');
-    }
-
-    editModal.addEventListener('click', function(e) {
-        if (e.target === editModal) {
-            closeEditModal();
-        }
-    });
-</script>
-@endsection

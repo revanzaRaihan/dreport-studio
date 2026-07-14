@@ -1,0 +1,76 @@
+/* Premium Grid Layout for Form */
+.report-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+    margin-top: 16px;
+}
+
+@media (min-width: 768px) {
+    .report-grid {
+        grid-template-columns: 1.05fr 0.95fr;
+        gap: 32px;
+    }
+}
+
+/* Drag and Drop Upload Box */
+.upload-dropzone {
+    border: 2px dashed var(--line, #E4DCCE);
+    border-radius: 10px;
+    padding: 24px 16px;
+    text-align: center;
+    background: #FCFAF6;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    position: relative;
+    min-height: 120px;
+    box-sizing: border-box;
+}
+
+.upload-dropzone:hover, .upload-dropzone.dragover {
+    border-color: var(--teal, #2F8F7E);
+    background: #F4FAF8;
+    box-shadow: 0 4px 12px rgba(47, 143, 126, 0.04);
+}
+
+.upload-dropzone.has-file {
+    border-style: solid;
+    border-color: var(--teal, #2F8F7E);
+    background: #F4FAF8;
+}
+
+.upload-icon {
+    color: var(--muted, #8E8370);
+    transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.upload-dropzone:hover .upload-icon {
+    color: var(--teal, #2F8F7E);
+    transform: translateY(-2px);
+}
+
+.browse-link {
+    color: var(--teal, #2F8F7E);
+    font-weight: 600;
+    text-decoration: underline;
+}
+
+.upload-filename {
+    display: none;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--teal, #2F8F7E);
+    background: #EBF8F6;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid #C4EDE5;
+    max-width: 90%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
