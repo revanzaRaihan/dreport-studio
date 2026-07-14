@@ -1,0 +1,112 @@
+/* Premium History Card Styles */
+.history-card {
+    background: var(--paper-raised);
+    border: 1.5px solid var(--line);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 12px rgba(27,42,65,0.03);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    box-sizing: border-box;
+}
+
+.history-card:hover {
+    box-shadow: 0 8px 24px rgba(27,42,65,0.06);
+    transform: translateY(-2px);
+}
+
+.history-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 12px;
+}
+
+.history-card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--ink);
+}
+
+.history-card-date {
+    font-size: 12.5px;
+    color: var(--muted);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.history-card-params {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+.history-param-pill {
+    font-size: 12.5px;
+    background: #FAF8F5;
+    border: 1px solid #EAE5DB;
+    padding: 6px 12px;
+    border-radius: 6px;
+    color: var(--ink);
+    line-height: 1.4;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.history-param-pill strong {
+    color: var(--muted);
+    font-weight: 600;
+}
+
+.history-card-body {
+    font-size: 14.5px;
+    line-height: 1.7;
+    color: var(--ink);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.history-card-media {
+    margin-top: 8px;
+    border-radius: 8px;
+    overflow: hidden;
+    max-width: 320px;
+    border: 1.5px solid var(--line);
+}
+
+.history-card-media img {
+    width: 100%;
+    height: auto;
+    max-height: 200px;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.3s ease;
+}
+
+.history-card-media:hover img {
+    transform: scale(1.03);
+}
+
+.history-card-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+    flex-wrap: wrap;
+}

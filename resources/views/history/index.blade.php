@@ -39,13 +39,19 @@
             </div>
         @else
             @foreach($studentsWithReports as $student)
-                <div class="list-item">
+                <div class="list-item" style="padding: 16px 4px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1.5px solid var(--line);">
                     <div class="meta">
-                        <strong>{{ $student->name }}</strong>
-                        <span>{{ $student->subject }} · memiliki {{ $student->reports_count }} riwayat laporan</span>
+                        <strong style="font-size: 15px; color: var(--ink);">{{ $student->name }}</strong>
+                        <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap;">
+                            <span class="badge" style="background: #F1ECE1; color: var(--ink); border: none; font-size: 11px;">{{ $student->subject }}</span>
+                            <span style="font-size: 12.5px; color: var(--muted);">{{ $student->reports_count }} laporan tersimpan</span>
+                        </div>
                     </div>
-                    <div style="display: flex; gap: 6px; align-items: center; flex-shrink: 0;">
-                        <a href="{{ route('history.student', $student->id) }}" class="btn" style="padding: 6px 12px; font-size: 12.5px; text-decoration: none;">Lihat Detail</a>
+                    <div style="flex-shrink: 0;">
+                        <a href="{{ route('history.student', $student->id) }}" class="btn secondary" style="padding: 8px 14px; font-size: 12.5px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
+                            Lihat Detail
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                        </a>
                     </div>
                 </div>
             @endforeach

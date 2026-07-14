@@ -48,43 +48,53 @@
             <div class="empty">Belum ada laporan tersimpan untuk {{ $student->name }}.</div>
         @else
             @foreach($reports as $report)
-                <div class="list-item" style="align-items: flex-start; padding: 16px 4px;">
-                    <div class="meta" style="max-width: 80%;">
-                        <strong>
-                            Meeting ke-{{ $report->meeting_number }}
+                <div class="history-card">
+                    <div class="history-card-header">
+                        <div class="history-card-title">
+                            <span>Meeting ke-{{ $report->meeting_number }}</span>
                             <span class="badge amber">M{{ $report->meeting_number }}</span>
-                        </strong>
-                        <span style="font-size: 11.5px; margin-top: 2px;">
+                        </div>
+                        <div class="history-card-date">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--muted);"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                             {{ $report->report_date->format('d/m/Y') }}
-                        </span>
+                        </div>
+                    </div>
 
-                        <div style="font-size: 11px; color: var(--muted); background: #FAF9F6; padding: 6px 8px; border-radius: 4px; margin-top: 6px; border: 1px solid #EAE5DB;">
-                            <strong>Materi:</strong> {{ $report->materi }} <br>
+                    <div class="history-card-params">
+                        <div class="history-param-pill">
+                            <strong>Materi:</strong> {{ $report->materi }}
+                        </div>
+                        <div class="history-param-pill">
                             <strong>Behavior:</strong> {{ $report->behavior }}
                         </div>
-
-                        <span style="color: var(--ink); white-space: pre-wrap; margin-top: 10px; display: block; font-size: 13.5px; line-height: 1.6;">{{ $report->content }}</span>
-                        
-                        @if($report->image_url)
-                            <div style="margin-top: 12px; max-width: 100%;">
-                                <img src="{{ $report->image_url }}" alt="Dokumentasi Kelas" style="max-width: 260px; max-height: 180px; object-fit: cover; border-radius: 8px; border: 1.5px solid var(--line, #E4DCCE); box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
-                            </div>
-                        @endif
                     </div>
-                    <div style="display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; align-items: flex-end;">
-                        <button class="btn btn-wa" style="padding: 6px 10px; background-color: #25D366; color: white; border: none;"
+
+                    <div class="history-card-body">{{ $report->content }}</div>
+
+                    @if($report->image_url)
+                        <div class="history-card-media">
+                            <img src="{{ $report->image_url }}" alt="Dokumentasi Kelas">
+                        </div>
+                    @endif
+
+                    <div class="history-card-actions">
+                        <button class="btn btn-wa" style="background-color: #25D366; color: white; border: none; display: inline-flex; align-items: center;"
                                 data-meeting="{{ $report->meeting_number }}"
                                 data-date="{{ $report->report_date->format('d/m/Y') }}"
                                 data-materi="{{ $report->materi }}"
                                 data-behavior="{{ $report->behavior }}"
                                 data-content="{{ $report->content }}"
                                 data-image="{{ $report->image_url }}">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
                             Kirim WA
                         </button>
 
-                        <button class="btn secondary" style="padding: 6px 10px;" onclick="copyText('{{ addslashes($report->content) }}')">Copy</button>
+                        <button class="btn secondary" style="display: inline-flex; align-items: center;" onclick="copyText('{{ addslashes($report->content) }}')">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                            Copy
+                        </button>
                         
-                        <button class="btn secondary btn-edit" style="padding: 6px 10px;"
+                        <button class="btn secondary btn-edit" style="display: inline-flex; align-items: center;"
                                 data-id="{{ $report->id }}"
                                 data-meeting="{{ $report->meeting_number }}"
                                 data-date="{{ $report->report_date->format('Y-m-d') }}"
@@ -92,10 +102,14 @@
                                 data-behavior="{{ $report->behavior }}"
                                 data-content="{{ $report->content }}"
                                 data-image="{{ $report->image_url }}">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                             Edit
                         </button>
 
-                        <button type="button" class="btn danger" style="padding: 6px 10px; font-size: 12px;" onclick="openDeleteModal('{{ route('history.destroy', $report->id) }}', 'Apakah Anda yakin ingin menghapus laporan ini dari riwayat?')">Hapus</button>
+                        <button type="button" class="btn danger" style="font-size: 13.5px; display: inline-flex; align-items: center;" onclick="openDeleteModal('{{ route('history.destroy', $report->id) }}', 'Apakah Anda yakin ingin menghapus laporan ini dari riwayat?')">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                            Hapus
+                        </button>
                     </div>
                 </div>
             @endforeach

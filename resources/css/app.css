@@ -3,6 +3,7 @@
 @import './components/students.css';
 @import './components/schedule.css';
 @import './components/login.css';
+@import './components/history.css';
 
 @tailwind base;
 @tailwind components;
