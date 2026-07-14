@@ -44,6 +44,26 @@ class DatasetController extends Controller
     }
 
     /**
+     * Delete multiple dataset entries in one batch.
+     */
+    public function batchDelete(\Illuminate\Http\Request $request): RedirectResponse
+    {
+        $ids = $request->input('ids', []);
+
+        if (empty($ids)) {
+            return redirect()->route('dataset.index')
+                ->with('error', 'Tidak ada contoh laporan yang dipilih.');
+        }
+
+        $generalDeleted = DatasetEntry::whereIn('id', $ids)->delete();
+        $recDeleted = \App\Models\RecommendationDataset::whereIn('id', $ids)->delete();
+        $totalDeleted = $generalDeleted + $recDeleted;
+
+        return redirect()->route('dataset.index')
+            ->with('success', $totalDeleted . ' contoh laporan berhasil dihapus dari dataset.');
+    }
+
+    /**
      * Remove the specified dataset entry from storage.
      */
     public function destroy(string $id): RedirectResponse

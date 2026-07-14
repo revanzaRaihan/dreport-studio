@@ -54,11 +54,30 @@
 
     <!-- Contoh Tersimpan Card -->
     <div class="card">
-        <div style="border-bottom: 1px solid var(--line); padding-bottom: 16px; margin-bottom: 16px;">
-            <h2 style="margin: 0 0 12px 0;">Contoh Tersimpan (<span id="totalCount">{{ $dataset->count() + $recommendationDataset->count() }}</span>)</h2>
-            
-            <!-- Filters Row -->
-            <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid var(--line); padding-bottom: 16px; margin-bottom: 16px;">
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <h2 style="margin: 0;">Contoh Tersimpan (<span id="totalCount">{{ $dataset->count() + $recommendationDataset->count() }}</span>)</h2>
+
+                <!-- Batch Actions (tampil saat ada item terpilih) -->
+                <div id="batchActionContainer" style="display: none; align-items: center; gap: 10px;">
+                    <span style="font-size: 13px; color: var(--muted); font-weight: 600;"><span id="selectedCount">0</span> item terpilih</span>
+                    <button type="button" class="btn danger" style="padding: 5px 12px; font-size: 12px; display: inline-flex; align-items: center; gap: 5px;" onclick="triggerDatasetBatchDelete()">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        Hapus Terpilih
+                    </button>
+                </div>
+            </div>
+
+            @if(!$dataset->isEmpty() || !$recommendationDataset->isEmpty())
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--ink); margin: 0; background: #FCFAF6; border: 1.5px solid var(--line); border-radius: 6px; padding: 5px 12px; user-select: none;">
+                    <input type="checkbox" id="selectAllDataset" style="margin: 0; width: 16px; height: 16px; accent-color: var(--teal); cursor: pointer;">
+                    Pilih Semua
+                </label>
+            @endif
+        </div>
+
+        <!-- Filters Row -->
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px;">
                 <!-- Filter Bahasa -->
                 <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                     <span style="font-size: 12px; font-weight: 600; color: var(--muted); width: 80px;">Bahasa:</span>
@@ -81,7 +100,7 @@
                     </div>
                 </div>
 
-                <!-- Filter Kategori Rekomendasi (Hanya muncul jika type = training_recommendation atau type = all) -->
+                <!-- Filter Kategori Rekomendasi -->
                 <div id="categoryFilterRow" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                     <span style="font-size: 12px; font-weight: 600; color: var(--muted); width: 80px;">Kategori Rec:</span>
                     <div class="sub-tabs category-filters" style="display: flex; gap: 4px; background: #FAF9F6; border: 1.5px solid var(--line); padding: 3px; border-radius: 6px;">
@@ -93,7 +112,6 @@
                     </div>
                 </div>
             </div>
-        </div>
         
         <div id="datasetList">
             @if($dataset->isEmpty() && $recommendationDataset->isEmpty())
@@ -102,16 +120,19 @@
                 <!-- Loop General Dataset -->
                 @foreach($dataset as $entry)
                     <div class="list-item dataset-item lang-{{ $entry->language }} type-{{ $entry->section_type }} cat-all" style="align-items: flex-start; display: flex; justify-content: space-between; border-bottom: 1.5px solid var(--line); padding: 16px 0;">
-                        <div class="meta" style="max-width: 80%;">
-                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
-                                <span class="badge" style="background: {{ $entry->language === 'en' ? '#EBF5FF' : '#E6FFFA' }}; color: {{ $entry->language === 'en' ? '#1E40AF' : '#047857' }}; border: none; font-size: 10.5px; padding: 2px 8px; border-radius: 4px; font-weight: 600;">
-                                    {{ $entry->language === 'en' ? 'English' : 'Bahasa Indonesia' }}
-                                </span>
-                                <span class="badge" style="background: #F3F4F6; color: #374151; border: none; font-size: 10.5px; padding: 2px 8px; border-radius: 4px; font-weight: 600;">
-                                    {{ Str::upper(str_replace('_', ' ', $entry->section_type)) }}
-                                </span>
+                        <div style="display: flex; align-items: flex-start; gap: 12px; flex: 1; max-width: 85%;">
+                            <input type="checkbox" class="dataset-select-cb" value="{{ $entry->id }}" style="margin-top: 4px; width: 16px; height: 16px; accent-color: var(--teal); cursor: pointer; flex-shrink: 0;">
+                            <div class="meta" style="flex: 1;">
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
+                                    <span class="badge" style="background: {{ $entry->language === 'en' ? '#EBF5FF' : '#E6FFFA' }}; color: {{ $entry->language === 'en' ? '#1E40AF' : '#047857' }}; border: none; font-size: 10.5px; padding: 2px 8px; border-radius: 4px; font-weight: 600;">
+                                        {{ $entry->language === 'en' ? 'English' : 'Bahasa Indonesia' }}
+                                    </span>
+                                    <span class="badge" style="background: #F3F4F6; color: #374151; border: none; font-size: 10.5px; padding: 2px 8px; border-radius: 4px; font-weight: 600;">
+                                        {{ Str::upper(str_replace('_', ' ', $entry->section_type)) }}
+                                    </span>
+                                </div>
+                                <span style="font-size: 13.5px; color: var(--ink); white-space: pre-wrap; line-height: 1.5;">{{ Str::limit($entry->body, 220, '…') }}</span>
                             </div>
-                            <span style="font-size: 13.5px; color: var(--ink); white-space: pre-wrap; line-height: 1.5;">{{ Str::limit($entry->body, 220, '…') }}</span>
                         </div>
                         <button type="button" class="btn danger" style="padding: 6px 10px;" onclick="openDeleteModal('{{ route('dataset.destroy', $entry->id) }}', 'Hapus contoh laporan ini dari dataset?')">Hapus</button>
                     </div>
@@ -120,19 +141,22 @@
                 <!-- Loop Recommendation Dataset -->
                 @foreach($recommendationDataset as $entry)
                     <div class="list-item dataset-item lang-{{ $entry->language }} type-training_recommendation cat-{{ $entry->category }}" style="align-items: flex-start; display: flex; justify-content: space-between; border-bottom: 1.5px solid var(--line); padding: 16px 0;">
-                        <div class="meta" style="max-width: 80%;">
-                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
-                                <span class="badge" style="background: {{ $entry->language === 'en' ? '#EBF5FF' : '#E6FFFA' }}; color: {{ $entry->language === 'en' ? '#1E40AF' : '#047857' }}; border: none; font-size: 10.5px; padding: 2px 8px; border-radius: 4px; font-weight: 600;">
-                                    {{ $entry->language === 'en' ? 'English' : 'Bahasa Indonesia' }}
-                                </span>
-                                <span class="badge" style="background: #E0F2FE; color: #0369A1; border: none; font-size: 10.5px; padding: 2px 8px; border-radius: 4px; font-weight: 600;">
-                                    TRAINING RECOMMENDATION
-                                </span>
-                                <span class="badge" style="background: #FEF3C7; color: #92400E; border: none; font-size: 10.5px; padding: 2px 8px; border-radius: 4px; font-weight: 600;">
-                                    {{ Str::upper(str_replace('_', ' ', $entry->category)) }}
-                                </span>
+                        <div style="display: flex; align-items: flex-start; gap: 12px; flex: 1; max-width: 85%;">
+                            <input type="checkbox" class="dataset-select-cb" value="{{ $entry->id }}" style="margin-top: 4px; width: 16px; height: 16px; accent-color: var(--teal); cursor: pointer; flex-shrink: 0;">
+                            <div class="meta" style="flex: 1;">
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
+                                    <span class="badge" style="background: {{ $entry->language === 'en' ? '#EBF5FF' : '#E6FFFA' }}; color: {{ $entry->language === 'en' ? '#1E40AF' : '#047857' }}; border: none; font-size: 10.5px; padding: 2px 8px; border-radius: 4px; font-weight: 600;">
+                                        {{ $entry->language === 'en' ? 'English' : 'Bahasa Indonesia' }}
+                                    </span>
+                                    <span class="badge" style="background: #E0F2FE; color: #0369A1; border: none; font-size: 10.5px; padding: 2px 8px; border-radius: 4px; font-weight: 600;">
+                                        TRAINING RECOMMENDATION
+                                    </span>
+                                    <span class="badge" style="background: #FEF3C7; color: #92400E; border: none; font-size: 10.5px; padding: 2px 8px; border-radius: 4px; font-weight: 600;">
+                                        {{ Str::upper(str_replace('_', ' ', $entry->category)) }}
+                                    </span>
+                                </div>
+                                <span style="font-size: 13.5px; color: var(--ink); white-space: pre-wrap; line-height: 1.5;">{{ Str::limit($entry->body, 220, '…') }}</span>
                             </div>
-                            <span style="font-size: 13.5px; color: var(--ink); white-space: pre-wrap; line-height: 1.5;">{{ Str::limit($entry->body, 220, '…') }}</span>
                         </div>
                         <button type="button" class="btn danger" style="padding: 6px 10px;" onclick="openDeleteModal('{{ route('dataset.destroy', $entry->id) }}', 'Hapus contoh latihan ini dari dataset?')">Hapus</button>
                     </div>

@@ -89,8 +89,14 @@ document.addEventListener('turbo:load', () => {
                 visibleCount++;
             } else {
                 item.style.display = 'none';
+                // Uncheck checkboxes for hidden elements
+                const cb = item.querySelector('.dataset-select-cb');
+                if (cb) cb.checked = false;
             }
         });
+
+        // Update batch selection UI count when filter changes
+        updateBatchUI();
 
         // Handle empty message state
         let tempEmpty = document.querySelector('.temp-empty');
@@ -111,6 +117,95 @@ document.addEventListener('turbo:load', () => {
             if (defaultEmpty) defaultEmpty.style.display = 'block';
         }
     }
+
+    // --- Batch Selection & Delete Logic ---
+    const selectAllCb = document.getElementById('selectAllDataset');
+    const batchActionContainer = document.getElementById('batchActionContainer');
+    const selectedCountSpan = document.getElementById('selectedCount');
+
+    function updateBatchUI() {
+        const checkedCbs = document.querySelectorAll('.dataset-select-cb:checked');
+        const checkedCount = checkedCbs.length;
+
+        if (checkedCount > 0) {
+            if (batchActionContainer) batchActionContainer.style.display = 'flex';
+            if (selectedCountSpan) selectedCountSpan.textContent = checkedCount;
+        } else {
+            if (batchActionContainer) batchActionContainer.style.display = 'none';
+        }
+
+        if (selectAllCb) {
+            const visibleCbs = Array.from(document.querySelectorAll('.dataset-select-cb')).filter(cb => {
+                const item = cb.closest('.dataset-item');
+                return item ? item.style.display !== 'none' : true;
+            });
+            const visibleCheckedCount = visibleCbs.filter(cb => cb.checked).length;
+            selectAllCb.checked = (visibleCbs.length > 0 && visibleCheckedCount === visibleCbs.length);
+        }
+    }
+
+    if (selectAllCb) {
+        selectAllCb.addEventListener('change', function() {
+            const currentItemCbs = document.querySelectorAll('.dataset-select-cb');
+            currentItemCbs.forEach(cb => {
+                // Only select visible dataset items matching active filters
+                const item = cb.closest('.dataset-item');
+                const isVisible = item ? item.style.display !== 'none' : true;
+                
+                if (isVisible) {
+                    cb.checked = selectAllCb.checked;
+                } else {
+                    cb.checked = false;
+                }
+            });
+            updateBatchUI();
+        });
+    }
+
+    // Event delegation on datasetList to handle checkbox toggles cleanly
+    const datasetList = document.getElementById('datasetList');
+    if (datasetList) {
+        datasetList.addEventListener('change', function(e) {
+            if (e.target.classList.contains('dataset-select-cb')) {
+                updateBatchUI();
+            }
+        });
+    }
+
+    function triggerDatasetBatchDelete() {
+        const checkedCbs = document.querySelectorAll('.dataset-select-cb:checked');
+        const ids = Array.from(checkedCbs).map(cb => cb.value);
+
+        if (ids.length === 0) return;
+
+        // Reuse universal delete modal
+        const modal = document.getElementById('deleteModal');
+        const form = document.getElementById('deleteModalForm');
+        const msgEl = document.getElementById('deleteModalMessage');
+        if (!modal || !form || !msgEl) return;
+
+        // Clear any previous batch hidden inputs
+        form.querySelectorAll('.batch-id-input').forEach(el => el.remove());
+
+        // Set action route to batch delete for dataset
+        form.action = '/dataset/batch-delete';
+        
+        // Append selected IDs as hidden inputs
+        ids.forEach(id => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'ids[]';
+            input.value = id;
+            input.className = 'batch-id-input';
+            form.appendChild(input);
+        });
+
+        // Set confirmation message
+        msgEl.textContent = `Apakah Anda yakin ingin menghapus ${ids.length} contoh referensi dari dataset?`;
+        
+        modal.classList.add('show');
+    }
+    window.triggerDatasetBatchDelete = triggerDatasetBatchDelete;
 
     // Expose setFilter globally
     window.setFilter = setFilter;

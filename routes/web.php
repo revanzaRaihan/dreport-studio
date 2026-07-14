@@ -21,6 +21,7 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/students/{student}', [StudentController::class, 'destroy'])->name('students.destroy');
 
     // Dataset CRUD
+    Route::delete('/dataset/batch-delete', [DatasetController::class, 'batchDelete'])->name('dataset.batch-delete');
     Route::get('/dataset', [DatasetController::class, 'index'])->name('dataset.index');
     Route::post('/dataset', [DatasetController::class, 'store'])->name('dataset.store');
     Route::delete('/dataset/{dataset}', [DatasetController::class, 'destroy'])->name('dataset.destroy');
