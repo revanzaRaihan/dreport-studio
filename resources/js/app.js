@@ -97,6 +97,35 @@ function initSpaEngine() {
         e.preventDefault();
         submitForm(form);
     });
+
+    // Real-time live search debounce handler
+    let debounceTimer;
+    document.addEventListener('input', e => {
+        const input = e.target;
+        if (input.tagName === 'INPUT' && (input.name === 'search' || input.closest('.search-bar'))) {
+            const form = input.closest('form');
+            if (!form) return;
+
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                const action = form.getAttribute('action') || window.location.href;
+                const formData = new FormData(form);
+                const params = new URLSearchParams(formData);
+                
+                const url = new URL(action, window.location.origin);
+                params.forEach((value, key) => {
+                    url.searchParams.set(key, value);
+                });
+
+                const activeInputName = input.name;
+                const activeInputId = input.id;
+                const selectionStart = input.selectionStart;
+                const selectionEnd = input.selectionEnd;
+
+                loadSearchPage(url.toString(), activeInputName, activeInputId, selectionStart, selectionEnd);
+            }, 250);
+        }
+    });
 }
 
 function navigateTo(url) {
@@ -123,6 +152,43 @@ async function loadPage(url, pushState = true) {
     } finally {
         if (typeof NProgress !== 'undefined') NProgress.done();
         document.body.classList.remove('turbo-loading');
+    }
+}
+
+async function loadSearchPage(url, activeInputName, activeInputId, selectionStart, selectionEnd) {
+    if (typeof NProgress !== 'undefined') NProgress.start();
+
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Search request failed');
+        
+        const html = await response.text();
+        swapContent(html);
+
+        // Update URL state using replaceState to avoid cluttering browser history stack with each character typed
+        history.replaceState(null, '', url);
+
+        // Restore focus to the search input field
+        let restoredInput = null;
+        if (activeInputId) {
+            restoredInput = document.getElementById(activeInputId);
+        }
+        if (!restoredInput && activeInputName) {
+            restoredInput = document.querySelector(`input[name="${activeInputName}"]`);
+        }
+
+        if (restoredInput) {
+            restoredInput.focus();
+            try {
+                restoredInput.setSelectionRange(selectionStart, selectionEnd);
+            } catch (err) {
+                // ignore
+            }
+        }
+    } catch (error) {
+        console.error('Search swap error:', error);
+    } finally {
+        if (typeof NProgress !== 'undefined') NProgress.done();
     }
 }
 
