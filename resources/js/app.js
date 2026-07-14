@@ -92,19 +92,20 @@ function initSpaEngine() {
     // Intercept form submissions
     document.addEventListener('submit', e => {
         const form = e.target;
-        if (form.classList.contains('no-spa') || form.getAttribute('action') === '/logout') return;
+        const action = form.getAttribute('action') || '';
+        if (form.classList.contains('no-spa') || action.includes('/logout')) return;
 
         e.preventDefault();
         submitForm(form);
     });
 
-    // Real-time live search debounce handler
+    // Real-time live search debounce handler (text typing)
     let debounceTimer;
     document.addEventListener('input', e => {
         const input = e.target;
-        if (input.tagName === 'INPUT' && (input.name === 'search' || input.closest('.search-bar'))) {
-            const form = input.closest('form');
-            if (!form) return;
+        if (input.tagName === 'INPUT' && (input.type === 'text' || input.type === 'search')) {
+            const form = input.closest('form.search-bar');
+            if (!form || (form.getAttribute('method') || 'GET').toUpperCase() !== 'GET') return;
 
             clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => {
@@ -124,6 +125,26 @@ function initSpaEngine() {
 
                 loadSearchPage(url.toString(), activeInputName, activeInputId, selectionStart, selectionEnd);
             }, 250);
+        }
+    });
+
+    // Live search changes handler (comboboxes / dropdowns / checkboxes in search bars)
+    document.addEventListener('change', e => {
+        const el = e.target;
+        if (el.tagName === 'SELECT' || el.tagName === 'INPUT') {
+            const form = el.closest('form.search-bar');
+            if (!form || (form.getAttribute('method') || 'GET').toUpperCase() !== 'GET') return;
+
+            const action = form.getAttribute('action') || window.location.href;
+            const formData = new FormData(form);
+            const params = new URLSearchParams(formData);
+            
+            const url = new URL(action, window.location.origin);
+            params.forEach((value, key) => {
+                url.searchParams.set(key, value);
+            });
+
+            loadSearchPage(url.toString());
         }
     });
 }
@@ -202,9 +223,20 @@ async function submitForm(form) {
         submitBtn.disabled = true;
     }
 
-    const action = form.getAttribute('action') || window.location.href;
+    let action = form.getAttribute('action') || window.location.href;
     const method = (form.getAttribute('method') || 'POST').toUpperCase();
     
+    // For GET forms, append serialize parameters to the action URL
+    if (method === 'GET') {
+        const formData = new FormData(form);
+        const params = new URLSearchParams(formData);
+        const url = new URL(action, window.location.origin);
+        params.forEach((value, key) => {
+            url.searchParams.set(key, value);
+        });
+        action = url.toString();
+    }
+
     // Build request options
     const options = {
         method: method === 'GET' ? 'GET' : 'POST',
