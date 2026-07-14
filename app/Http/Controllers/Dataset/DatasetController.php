@@ -44,30 +44,51 @@ class DatasetController extends Controller
     }
 
     /**
-     * Remove the specified dataset entry from storage.
+     * Delete multiple dataset entries in one batch.
      */
-    public function destroy(string $id): RedirectResponse
+    public function batchDelete(\Illuminate\Http\Request $request): RedirectResponse
     {
-        $deleted = false;
+        $ids = $request->input('ids', []);
         
-        $entry = DatasetEntry::find($id);
-        if ($entry) {
-            $entry->delete();
-            $deleted = true;
-        } else {
-            $recEntry = \App\Models\RecommendationDataset::find($id);
-            if ($recEntry) {
-                $recEntry->delete();
-                $deleted = true;
-            }
-        }
-
-        if (!$deleted) {
+        if (!empty($ids)) {
+            $generalDeleted = DatasetEntry::whereIn('id', $ids)->delete();
+            $recDeleted = \App\Models\RecommendationDataset::whereIn('id', $ids)->delete();
+            
+            $totalDeleted = $generalDeleted + $recDeleted;
+            
             return redirect()->route('dataset.index')
-                ->with('error', 'Contoh laporan tidak ditemukan.');
+                ->with('success', $totalDeleted . ' contoh laporan berhasil dihapus dari dataset.');
         }
 
         return redirect()->route('dataset.index')
-            ->with('success', 'Contoh laporan berhasil dihapus dari dataset.');
+            ->with('error', 'Tidak ada contoh laporan yang dipilih.');
     }
-}
+
+    /**
+      * Remove the specified dataset entry from storage.
+      */
+     public function destroy(string $id): RedirectResponse
+     {
+         $deleted = false;
+         
+         $entry = DatasetEntry::find($id);
+         if ($entry) {
+             $entry->delete();
+             $deleted = true;
+         } else {
+             $recEntry = \App\Models\RecommendationDataset::find($id);
+             if ($recEntry) {
+                 $recEntry->delete();
+                 $deleted = true;
+             }
+         }
+ 
+         if (!$deleted) {
+             return redirect()->route('dataset.index')
+                 ->with('error', 'Contoh laporan tidak ditemukan.');
+         }
+ 
+         return redirect()->route('dataset.index')
+             ->with('success', 'Contoh laporan berhasil dihapus dari dataset.');
+     }
+ }
