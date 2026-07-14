@@ -38,7 +38,28 @@
 
     <!-- Daftar Listing Report Card -->
     <div class="card">
-        <h2 style="margin-bottom: 10px;">Daftar antrean laporan (Belum Dibuat)</h2>
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; border-bottom: 1.5px solid var(--line); padding-bottom: 12px;">
+            <h2 style="margin: 0;">Daftar antrean laporan (Belum Dibuat)</h2>
+            
+            <!-- Batch Actions Container (hidden by default) -->
+            <div id="batchActionContainer" style="display: none; align-items: center; gap: 12px;">
+                <span style="font-size: 13px; color: var(--muted); font-weight: 600;"><span id="selectedCount">0</span> item terpilih</span>
+                <button type="button" class="btn danger" style="padding: 6px 12px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;" onclick="triggerBatchDelete()">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    Hapus Terpilih
+                </button>
+            </div>
+        </div>
+
+        <!-- Select All Control Row -->
+        @if(!$studentsWithPending->isEmpty())
+            <div style="background: #FCFAF6; border: 1.5px solid var(--line); border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; font-size: 13px; font-weight: 600; color: var(--ink); margin: 0;">
+                    <input type="checkbox" id="selectAllPending" style="margin: 0; width: 16px; height: 16px; accent-color: var(--teal); cursor: pointer;">
+                    Pilih Semua
+                </label>
+            </div>
+        @endif
 
         {{-- Search bar --}}
         <form method="GET" action="{{ route('pending-reports.index') }}" class="search-bar">
@@ -77,7 +98,10 @@
                         @foreach($student->pendingReports as $pending)
                             <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 12px;">
                                 <div style="font-size: 13.5px; color: var(--ink, #1B2A41);">
-                                    Pertemuan Ke-<strong style="color: var(--teal, #2F8F7E);">{{ $pending->meeting_number }}</strong> · Tanggal: <span style="font-weight: 500;">{{ $pending->report_date ? $pending->report_date->format('d M Y') : '-' }}</span>
+                                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; margin: 0; font-weight: normal;">
+                                        <input type="checkbox" class="pending-select-cb" value="{{ $pending->id }}" style="margin: 0; width: 16px; height: 16px; accent-color: var(--teal); cursor: pointer;">
+                                        <span>Pertemuan Ke-<strong style="color: var(--teal, #2F8F7E);">{{ $pending->meeting_number }}</strong> · Tanggal: <span style="font-weight: 500;">{{ $pending->report_date ? $pending->report_date->format('d M Y') : '-' }}</span></span>
+                                    </label>
                                 </div>
                                 <div style="display: flex; gap: 6px; align-items: center; flex-shrink: 0;">
                                     <a href="{{ route('report.index') }}?student_id={{ $pending->student_id }}&pending_report_id={{ $pending->id }}" class="btn" style="padding: 4px 8px; font-size: 11.5px; text-decoration: none; display: inline-block;">Tulis Laporan</a>

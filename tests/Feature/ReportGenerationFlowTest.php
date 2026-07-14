@@ -281,6 +281,45 @@ class ReportGenerationFlowTest extends TestCase
     }
 
     /**
+     * Test Pending Report Batch Delete.
+     */
+    public function test_pending_report_batch_delete(): void
+    {
+        $this->actingAs($this->user);
+
+        $student = Student::create([
+            'name' => 'Budi Batch',
+            'subject' => 'Kimia',
+            'meeting_count' => 0
+        ]);
+
+        $pending1 = \App\Models\PendingReport::create([
+            'student_id' => $student->id,
+            'meeting_number' => 1,
+            'report_date' => '2026-07-16'
+        ]);
+
+        $pending2 = \App\Models\PendingReport::create([
+            'student_id' => $student->id,
+            'meeting_number' => 2,
+            'report_date' => '2026-07-17'
+        ]);
+
+        // 1. Delete batch with empty IDs
+        $response = $this->delete('/pending-reports/batch-delete', ['ids' => []]);
+        $response->assertRedirect('/pending-reports');
+        $response->assertSessionHas('error');
+
+        // 2. Delete batch with valid IDs
+        $response = $this->delete('/pending-reports/batch-delete', ['ids' => [$pending1->id, $pending2->id]]);
+        $response->assertRedirect('/pending-reports');
+        $response->assertSessionHas('success');
+
+        $this->assertSoftDeleted('pending_reports', ['id' => $pending1->id]);
+        $this->assertSoftDeleted('pending_reports', ['id' => $pending2->id]);
+    }
+
+    /**
      * Test saving a report automatically deletes the associated pending report.
      */
     public function test_saving_report_deletes_associated_pending_report(): void

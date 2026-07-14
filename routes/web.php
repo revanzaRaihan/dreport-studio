@@ -38,6 +38,7 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('schedule', \App\Http\Controllers\Schedule\ScheduleController::class)->except(['create', 'edit', 'show']);
 
     // Pending Reports CRUD
+    Route::delete('/pending-reports/batch-delete', [\App\Http\Controllers\PendingReport\PendingReportController::class, 'batchDelete'])->name('pending-reports.batch-delete');
     Route::get('/pending-reports', [\App\Http\Controllers\PendingReport\PendingReportController::class, 'index'])->name('pending-reports.index');
     Route::post('/pending-reports', [\App\Http\Controllers\PendingReport\PendingReportController::class, 'store'])->name('pending-reports.store');
     Route::put('/pending-reports/{pending_report}', [\App\Http\Controllers\PendingReport\PendingReportController::class, 'update'])->name('pending-reports.update');

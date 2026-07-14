@@ -65,6 +65,23 @@ class PendingReportController extends Controller
     }
 
     /**
+     * Delete multiple pending reports in one batch.
+     */
+    public function batchDelete(Request $request): RedirectResponse
+    {
+        $ids = $request->input('ids', []);
+        
+        if (!empty($ids)) {
+            PendingReport::whereIn('id', $ids)->delete();
+            return redirect()->route('pending-reports.index')
+                ->with('success', count($ids) . ' antrean laporan berhasil dihapus.');
+        }
+
+        return redirect()->route('pending-reports.index')
+            ->with('error', 'Tidak ada antrean laporan yang dipilih.');
+    }
+
+    /**
      * Remove the specified pending report from storage.
      */
     public function destroy(PendingReport $pendingReport): RedirectResponse
