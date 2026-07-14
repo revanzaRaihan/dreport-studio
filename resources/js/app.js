@@ -103,9 +103,14 @@ function initSpaEngine() {
     let debounceTimer;
     document.addEventListener('input', e => {
         const input = e.target;
+        console.log('[SPA Search] Input event detected on:', input.tagName, 'name:', input.name, 'type:', input.type);
         if (input.tagName === 'INPUT' && (input.type === 'text' || input.type === 'search')) {
             const form = input.closest('form.search-bar');
-            if (!form || (form.getAttribute('method') || 'GET').toUpperCase() !== 'GET') return;
+            console.log('[SPA Search] Closest form.search-bar:', form);
+            if (!form) return;
+            const method = (form.getAttribute('method') || 'GET').toUpperCase();
+            console.log('[SPA Search] Form method:', method);
+            if (method !== 'GET') return;
 
             clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => {
@@ -117,6 +122,8 @@ function initSpaEngine() {
                 params.forEach((value, key) => {
                     url.searchParams.set(key, value);
                 });
+
+                console.log('[SPA Search] Triggering loadSearchPage for:', url.toString());
 
                 const activeInputName = input.name;
                 const activeInputId = input.id;
@@ -131,9 +138,14 @@ function initSpaEngine() {
     // Live search changes handler (comboboxes / dropdowns / checkboxes in search bars)
     document.addEventListener('change', e => {
         const el = e.target;
+        console.log('[SPA Search] Change event detected on:', el.tagName, 'name:', el.name, 'type:', el.type);
         if (el.tagName === 'SELECT' || el.tagName === 'INPUT') {
             const form = el.closest('form.search-bar');
-            if (!form || (form.getAttribute('method') || 'GET').toUpperCase() !== 'GET') return;
+            console.log('[SPA Search] Closest form.search-bar (change):', form);
+            if (!form) return;
+            const method = (form.getAttribute('method') || 'GET').toUpperCase();
+            console.log('[SPA Search] Form method (change):', method);
+            if (method !== 'GET') return;
 
             const action = form.getAttribute('action') || window.location.href;
             const formData = new FormData(form);
@@ -144,6 +156,7 @@ function initSpaEngine() {
                 url.searchParams.set(key, value);
             });
 
+            console.log('[SPA Search] Triggering change loadSearchPage for:', url.toString());
             loadSearchPage(url.toString());
         }
     });
@@ -177,6 +190,7 @@ async function loadPage(url, pushState = true) {
 }
 
 async function loadSearchPage(url, activeInputName, activeInputId, selectionStart, selectionEnd) {
+    console.log('[SPA Search] Fetching URL:', url);
     if (typeof NProgress !== 'undefined') NProgress.start();
 
     try {
@@ -184,6 +198,7 @@ async function loadSearchPage(url, activeInputName, activeInputId, selectionStar
         if (!response.ok) throw new Error('Search request failed');
         
         const html = await response.text();
+        console.log('[SPA Search] Fetch response received, swapping content...');
         swapContent(html);
 
         // Update URL state using replaceState to avoid cluttering browser history stack with each character typed
@@ -198,6 +213,7 @@ async function loadSearchPage(url, activeInputName, activeInputId, selectionStar
             restoredInput = document.querySelector(`input[name="${activeInputName}"]`);
         }
 
+        console.log('[SPA Search] Restoring focus to input:', restoredInput);
         if (restoredInput) {
             restoredInput.focus();
             try {
@@ -207,7 +223,7 @@ async function loadSearchPage(url, activeInputName, activeInputId, selectionStar
             }
         }
     } catch (error) {
-        console.error('Search swap error:', error);
+        console.error('[SPA Search] Search swap error:', error);
     } finally {
         if (typeof NProgress !== 'undefined') NProgress.done();
     }
@@ -276,12 +292,14 @@ async function submitForm(form) {
 }
 
 function swapContent(htmlString) {
+    console.log('[SPA Search] swapContent called with html length:', htmlString.length);
     const parser = new DOMParser();
     const doc = parser.parseFromString(htmlString, 'text/html');
     
     const newApp = doc.querySelector('.app');
     const currentApp = document.querySelector('.app');
     
+    console.log('[SPA Search] newApp found:', !!newApp, 'currentApp found:', !!currentApp);
     if (newApp && currentApp) {
         // Find success/error alerts in the new HTML
         const successAlert = newApp.querySelector('.alert-success');
