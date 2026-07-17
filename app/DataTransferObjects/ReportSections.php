@@ -8,7 +8,8 @@ class ReportSections
         public string $overview,
         public string $teachersNote,
         public string $trainingRecommendation,
-        public string $parentNote
+        public string $parentNote,
+        public string $lessonCompleted = ''
     ) {}
 
     /**
@@ -27,12 +28,14 @@ class ReportSections
         $teachersNote = $data['teachersNote'] ?? $data['teachers_note'] ?? '';
         $trainingRecommendation = $data['trainingRecommendation'] ?? $data['training_recommendation'] ?? '';
         $parentNote = $data['parentNote'] ?? $data['parent_note'] ?? '';
+        $lessonCompleted = $data['lessonCompleted'] ?? $data['lesson_completed'] ?? '';
 
         return new self(
             trim($overview),
             trim($teachersNote),
             trim($trainingRecommendation),
-            trim($parentNote)
+            trim($parentNote),
+            trim($lessonCompleted)
         );
     }
 
@@ -46,6 +49,7 @@ class ReportSections
             'teachersNote' => $this->teachersNote,
             'trainingRecommendation' => $this->trainingRecommendation,
             'parentNote' => $this->parentNote,
+            'lessonCompleted' => $this->lessonCompleted,
         ];
     }
 

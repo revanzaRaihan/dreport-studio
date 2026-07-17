@@ -14,5 +14,11 @@ class RecommendationDataset extends Model
         'category',
         'body',
         'language',
+        'user_id',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

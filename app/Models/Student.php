@@ -16,11 +16,17 @@ class Student extends Model
         'subject',
         'meeting_count',
         'first_meeting_date',
+        'user_id',
     ];
 
     protected $casts = [
         'first_meeting_date' => 'date',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 
     public function reports()
     {

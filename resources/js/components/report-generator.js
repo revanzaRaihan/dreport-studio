@@ -295,7 +295,8 @@ document.addEventListener('turbo:load', () => {
                 meeting_number: meetingNumber,
                 materi: materi,
                 behavior: behavior,
-                language: document.getElementById('genLanguage').value
+                language: document.getElementById('genLanguage').value,
+                report_type: document.getElementById('genReportType') ? document.getElementById('genReportType').value : 'full'
             });
 
             // Populate output view and metadata
@@ -332,6 +333,33 @@ document.addEventListener('turbo:load', () => {
 
     if (btnGenerate) btnGenerate.addEventListener('click', generateReport);
     if (btnRegenerate) btnRegenerate.addEventListener('click', generateReport);
+
+    // Report Type selection toggles
+    const btnTypeFull = document.getElementById('btnTypeFull');
+    const btnTypeOverview = document.getElementById('btnTypeOverview');
+    const inputReportType = document.getElementById('genReportType');
+
+    if (btnTypeFull && btnTypeOverview && inputReportType) {
+        btnTypeFull.addEventListener('click', () => {
+            inputReportType.value = 'full';
+            btnTypeFull.classList.add('active');
+            btnTypeFull.style.background = 'var(--teal)';
+            btnTypeFull.style.color = 'var(--paper)';
+            btnTypeOverview.classList.remove('active');
+            btnTypeOverview.style.background = 'transparent';
+            btnTypeOverview.style.color = 'var(--muted)';
+        });
+
+        btnTypeOverview.addEventListener('click', () => {
+            inputReportType.value = 'overview';
+            btnTypeOverview.classList.add('active');
+            btnTypeOverview.style.background = 'var(--teal)';
+            btnTypeOverview.style.color = 'var(--paper)';
+            btnTypeFull.classList.remove('active');
+            btnTypeFull.style.background = 'transparent';
+            btnTypeFull.style.color = 'var(--muted)';
+        });
+    }
 
     // Helpers
     function showStatus(msg, type) {

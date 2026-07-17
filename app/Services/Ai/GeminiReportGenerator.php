@@ -43,8 +43,9 @@ class GeminiReportGenerator implements AiReportGeneratorInterface
                             'teachersNote' => ['type' => 'string'],
                             'trainingRecommendation' => ['type' => 'string'],
                             'parentNote' => ['type' => 'string'],
+                            'lessonCompleted' => ['type' => 'string'],
                         ],
-                        'required' => ['overview', 'teachersNote', 'trainingRecommendation', 'parentNote']
+                        'required' => ['overview', 'teachersNote', 'trainingRecommendation', 'parentNote', 'lessonCompleted']
                     ]
                 ]
             ]);

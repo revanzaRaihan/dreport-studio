@@ -38,7 +38,8 @@ class GenerateReportAction
         string $date,
         string $materi,
         string $behavior,
-        string $language = 'id'
+        string $language = 'id',
+        string $reportType = 'full'
     ): array {
         // Step 1: Classify behavior
         $classification = $this->classifyBehavior->execute($behavior, $materi);
@@ -65,6 +66,9 @@ class GenerateReportAction
 
                 $reportSections = $this->generator->generate($prompt);
 
+                // Run security and formatting validation
+                $this->validateSections($reportSections);
+
                 if ($this->isValidReport($reportSections)) {
                     break;
                 }
@@ -79,7 +83,7 @@ class GenerateReportAction
         }
 
         // Step 3: Assemble sections deterministically
-        $outputText = $this->assembler->assemble($student, $meetingNumber, $date, $reportSections);
+        $outputText = $this->assembler->assemble($student, $meetingNumber, $date, $reportSections, $language, $reportType);
 
         // Step 4: Warning flag if it still doesn't satisfy safety length validation
         $warning = null;
@@ -94,18 +98,49 @@ class GenerateReportAction
     }
 
     /**
+     * Security and length validation for generated AI sections.
+     */
+    private function validateSections(ReportSections $sections): void
+    {
+        $fields = [
+            'overview' => $sections->overview,
+            'teachersNote' => $sections->teachersNote,
+            'trainingRecommendation' => $sections->trainingRecommendation,
+            'parentNote' => $sections->parentNote,
+            'lessonCompleted' => $sections->lessonCompleted,
+        ];
+
+        foreach ($fields as $field => $value) {
+            if (!is_string($value)) {
+                throw new Exception("AI output field '{$field}' must be a string.");
+            }
+
+            $len = strlen($value);
+            $minLen = ($field === 'lessonCompleted') ? 3 : 5;
+            if ($len < $minLen || $len > 3000) {
+                throw new Exception("AI output field '{$field}' has invalid length: {$len} characters (expected {$minLen}-3000).");
+            }
+
+            if (strip_tags($value) !== $value) {
+                throw new Exception("AI output field '{$field}' contains forbidden HTML or script tags.");
+            }
+        }
+    }
+
+    /**
      * Helper to validate report sections output length.
      */
     private function isValidReport(ReportSections $sections): bool
     {
-        if (empty($sections->overview) || empty($sections->teachersNote) || empty($sections->trainingRecommendation) || empty($sections->parentNote)) {
+        if (empty($sections->overview) || empty($sections->teachersNote) || empty($sections->trainingRecommendation) || empty($sections->parentNote) || empty($sections->lessonCompleted)) {
             return false;
         }
 
-        if (strlen($sections->overview) < 50) return false;
-        if (strlen($sections->teachersNote) < 40) return false;
-        if (strlen($sections->trainingRecommendation) < 50) return false;
-        if (strlen($sections->parentNote) < 40) return false;
+        if (strlen($sections->overview) < 30) return false;
+        if (strlen($sections->teachersNote) < 15) return false;
+        if (strlen($sections->trainingRecommendation) < 15) return false;
+        if (strlen($sections->parentNote) < 15) return false;
+        if (strlen($sections->lessonCompleted) < 3) return false;
 
         return true;
     }

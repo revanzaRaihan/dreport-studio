@@ -25,7 +25,7 @@
                 </label>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr; gap: 14px; margin-bottom: 14px; max-width: 600px;">
+            <div style="display: grid; grid-template-columns: 1fr; gap: 14px; margin-bottom: 14px;">
                 <div>
                     <label for="sectionTypeSelect" style="font-weight: 600; font-size: 13.5px; display: block; margin-bottom: 6px;">Tipe Bagian Laporan:</label>
                     <select name="section_type" id="sectionTypeSelect" style="background: #FCFAF6; border: 1.5px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 14px; font-family: inherit; color: var(--ink); cursor: pointer; width: 100%; box-sizing: border-box; height: 42px;">

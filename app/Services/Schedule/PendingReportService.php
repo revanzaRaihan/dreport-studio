@@ -11,14 +11,18 @@ use Illuminate\Support\Facades\Cache;
 
 class PendingReportService
 {
-    private static string $cacheKey = 'pending_reports_sync_timestamp';
+    private static function getCacheKey(): string
+    {
+        $userId = auth()->id() ?? 'global';
+        return 'pending_reports_sync_timestamp_' . $userId;
+    }
 
     /**
      * Clear the sync status cache, forcing a refresh on next page load.
      */
     public static function clearCache(): void
     {
-        Cache::forget(self::$cacheKey);
+        Cache::forget(self::getCacheKey());
     }
 
     /**
@@ -27,18 +31,23 @@ class PendingReportService
      */
     public static function sync(): void
     {
+        $cacheKey = self::getCacheKey();
+
         // Performance optimization: skip sync if it has run recently
-        if (Cache::has(self::$cacheKey)) {
+        if (Cache::has($cacheKey)) {
             return;
         }
 
         try {
-            // Get all students with their active schedules
-            $students = Student::with('schedules')->get();
+            // Get all students with their active schedules (scoped to user if authenticated)
+            $studentsQuery = Student::with('schedules');
+            if (auth()->check()) {
+                $studentsQuery->where('user_id', auth()->id());
+            }
+            $students = $studentsQuery->get();
 
             if ($students->isEmpty()) {
-                Cache::put(self::$cacheKey, true, 600); // cache for 10 mins
-                return;
+                Cache::put($cacheKey, true, 600); // cache for 10 mins
             }
 
             $studentIds = $students->pluck('id');
@@ -131,7 +140,7 @@ class PendingReportService
             }
 
             // Cache the sync timestamp for 10 minutes (600 seconds)
-            Cache::put(self::$cacheKey, true, 600);
+            Cache::put($cacheKey, true, 600);
 
         } catch (\Exception $e) {
             Log::error('Auto pending report generation error: ' . $e->getMessage());

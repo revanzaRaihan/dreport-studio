@@ -7,9 +7,8 @@
 
 @section('content')
 <section class="panel active" id="tab-murid">
-    <div class="students-grid">
         <!-- Kolom Kiri: Tambah Murid Card -->
-        <div class="card" style="padding: 24px;">
+        <div class="card">
             <h2 style="margin-bottom: 4px;">Tambah murid</h2>
             <p class="desc" style="margin-bottom: 20px;">Satu murid terikat ke satu mata pelajaran/kelas utama. Atur parameter awal jika ada riwayat belajar sebelumnya.</p>
             
@@ -52,7 +51,7 @@
         </div>
 
         <!-- Kolom Kanan: Daftar Murid Card -->
-        <div class="card" style="padding: 24px;">
+        <div class="card">
             <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; border-bottom: 1.5px solid var(--line); padding-bottom: 12px;">
                 <h2 style="margin: 0;">Daftar murid</h2>
                 {{-- Search bar --}}
@@ -107,7 +106,6 @@
                 <x-pagination :paginator="$students" />
             @endif
         </div>
-    </div>
 </section>
 
 

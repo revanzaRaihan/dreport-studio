@@ -9,6 +9,7 @@ use App\Services\Schedule\PendingReportService;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
+use Illuminate\Validation\Rule;
 
 class ScheduleController extends Controller
 {
@@ -17,14 +18,17 @@ class ScheduleController extends Controller
      */
     public function index(): View
     {
-        // Get all schedules grouped or ordered by day and start time
-        $schedules = Schedule::with('students')
+        // Get all schedules for the logged-in user
+        $schedules = Schedule::where('user_id', auth()->id())
+            ->with(['students' => function ($q) {
+                $q->where('user_id', auth()->id());
+            }])
             ->orderBy('day_of_week')
             ->orderBy('start_time')
             ->get();
 
-        // Get all students for multi-select dropdowns/checkboxes
-        $students = Student::orderBy('name')->get();
+        // Get all students for multi-select dropdowns/checkboxes (scoped to user)
+        $students = Student::where('user_id', auth()->id())->orderBy('name')->get();
 
         // Days mapping for display
         $days = [
@@ -36,8 +40,9 @@ class ScheduleController extends Controller
             6 => 'Sabtu',
         ];
 
-        // Distinct subjects for filtering
-        $subjects = Student::whereNotNull('subject')
+        // Distinct subjects for filtering (scoped to user)
+        $subjects = Student::where('user_id', auth()->id())
+            ->whereNotNull('subject')
             ->where('subject', '!=', '')
             ->distinct()
             ->orderBy('subject')
@@ -57,7 +62,12 @@ class ScheduleController extends Controller
             'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
             'label' => ['nullable', 'string', 'max:100'],
             'student_ids' => ['nullable', 'array'],
-            'student_ids.*' => ['uuid', 'exists:students,id'],
+            'student_ids.*' => [
+                'uuid',
+                Rule::exists('students', 'id')->where(function ($query) {
+                    $query->where('user_id', auth()->id())->whereNull('deleted_at');
+                })
+            ],
         ]);
 
         $schedule = Schedule::create([
@@ -65,6 +75,7 @@ class ScheduleController extends Controller
             'start_time' => $validated['start_time'],
             'end_time' => $validated['end_time'],
             'label' => $validated['label'],
+            'user_id' => auth()->id(),
         ]);
 
         $schedule->students()->sync($validated['student_ids'] ?? []);
@@ -84,13 +95,23 @@ class ScheduleController extends Controller
      */
     public function update(Request $request, Schedule $schedule): RedirectResponse
     {
+        // Enforce ownership
+        if ($schedule->user_id !== auth()->id()) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $validated = $request->validate([
             'day_of_week' => ['required', 'integer', 'between:1,6'],
             'start_time' => ['required', 'date_format:H:i'],
             'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
             'label' => ['nullable', 'string', 'max:100'],
             'student_ids' => ['nullable', 'array'],
-            'student_ids.*' => ['uuid', 'exists:students,id'],
+            'student_ids.*' => [
+                'uuid',
+                Rule::exists('students', 'id')->where(function ($query) {
+                    $query->where('user_id', auth()->id())->whereNull('deleted_at');
+                })
+            ],
         ]);
 
         $schedule->update([
@@ -117,6 +138,11 @@ class ScheduleController extends Controller
      */
     public function destroy(Schedule $schedule): RedirectResponse
     {
+        // Enforce ownership
+        if ($schedule->user_id !== auth()->id()) {
+            abort(403, 'Unauthorized action.');
+        }
+
         // Detach students before soft-deleting
         $schedule->students()->detach();
         $schedule->delete();

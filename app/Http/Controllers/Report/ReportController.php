@@ -10,10 +10,13 @@ use App\Services\Ai\AiReportGeneratorInterface;
 use App\Actions\Report\BuildAiPrompt;
 use App\Actions\Report\GenerateReportAction;
 use App\Http\Requests\Report\GenerateReportRequest;
+use App\Http\Requests\Report\StoreReportRequest;
+use App\Http\Requests\Report\UpdateReportRequest;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Log;
 use Exception;
 
 class ReportController extends Controller
@@ -32,10 +35,11 @@ class ReportController extends Controller
     {
         \App\Services\Schedule\PendingReportService::sync();
 
-        $students = Student::with('schedules')->orderBy('name')->get();
+        $students = Student::where('user_id', auth()->id())->with('schedules')->orderBy('name')->get();
         
         // Calculate dynamic meeting numbers mapped by student ID
         $latestReports = Report::select('student_id', 'meeting_number', 'report_date')
+            ->where('user_id', auth()->id())
             ->whereIn('student_id', $students->pluck('id'))
             ->orderBy('report_date', 'desc')
             ->orderBy('meeting_number', 'desc')
@@ -81,11 +85,14 @@ class ReportController extends Controller
             return [$s->id => $nextDate];
         });
         
-        // Get dataset count for warnings if empty
-        $datasetCount = DatasetEntry::count();
+        // Get dataset count for warnings if empty (scoped to user)
+        $datasetCount = DatasetEntry::where('user_id', auth()->id())->count();
 
         // Get pending reports grouped by student ID
-        $pendingReports = \App\Models\PendingReport::orderBy('meeting_number', 'asc')
+        $pendingReports = \App\Models\PendingReport::whereHas('student', function ($q) {
+                $q->where('user_id', auth()->id());
+            })
+            ->orderBy('meeting_number', 'asc')
             ->get()
             ->groupBy('student_id')
             ->map(function ($reports) {
@@ -112,8 +119,8 @@ class ReportController extends Controller
         $validated = $request->validated();
         $language = $validated['language'] ?? 'id';
         
-        // Verify we have at least one dataset entry for the selected language
-        if (DatasetEntry::where('language', $language)->count() === 0) {
+        // Verify we have at least one dataset entry for the selected language and user
+        if (DatasetEntry::where('user_id', auth()->id())->where('language', $language)->count() === 0) {
             $langName = $language === 'en' ? 'Bahasa Inggris' : 'Bahasa Indonesia';
             return response()->json([
                 'success' => false,
@@ -122,7 +129,7 @@ class ReportController extends Controller
         }
 
         try {
-            $student = Student::findOrFail($validated['student_id']);
+            $student = Student::where('user_id', auth()->id())->findOrFail($validated['student_id']);
             
             // Execute the action
             $result = $generateReportAction->execute(
@@ -131,7 +138,8 @@ class ReportController extends Controller
                 $validated['report_date'],
                 $validated['materi'],
                 $validated['behavior'],
-                $language
+                $language,
+                $validated['report_type'] ?? 'full'
             );
 
             return response()->json([
@@ -147,9 +155,15 @@ class ReportController extends Controller
                 'behavior' => $validated['behavior'],
             ]);
         } catch (Exception $e) {
+            // Log full details on server, return generic error to frontend for security
+            Log::error('AI Laporan Generation Exception: ' . $e->getMessage(), [
+                'exception' => $e,
+                'validated' => $validated
+            ]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal: ' . $e->getMessage()
+                'message' => 'Maaf, terjadi kesalahan sistem saat memproses laporan dengan AI. Silakan coba kembali.'
             ], 500);
         }
     }
@@ -157,20 +171,11 @@ class ReportController extends Controller
     /**
      * Save finalized report and increment student counter.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(StoreReportRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'student_id' => ['required', 'uuid', 'exists:students,id'],
-            'meeting_number' => ['required', 'integer'],
-            'report_date' => ['required', 'date'],
-            'materi' => ['required', 'string'],
-            'behavior' => ['required', 'string'],
-            'content' => ['required', 'string'],
-            'pending_report_id' => ['nullable', 'uuid', 'exists:pending_reports,id'],
-            'image' => ['nullable', 'image', 'max:5120'], // Max 5MB
-        ]);
+        $validated = $request->validated();
 
-        $student = Student::findOrFail($validated['student_id']);
+        $student = Student::where('user_id', auth()->id())->findOrFail($validated['student_id']);
 
         $imageUrl = null;
         if ($request->hasFile('image')) {
@@ -192,11 +197,16 @@ class ReportController extends Controller
             'behavior' => $validated['behavior'],
             'content' => $validated['content'],
             'image_url' => $imageUrl,
+            'user_id' => auth()->id(),
         ]);
 
         // Delete the pending report if it was resolved
         if (!empty($validated['pending_report_id'])) {
-            \App\Models\PendingReport::where('id', $validated['pending_report_id'])->delete();
+            \App\Models\PendingReport::where('id', $validated['pending_report_id'])
+                ->whereHas('student', function ($q) {
+                    $q->where('user_id', auth()->id());
+                })
+                ->delete();
         }
 
         // Increment student meeting count
@@ -209,16 +219,14 @@ class ReportController extends Controller
     /**
      * Update the specified report in storage.
      */
-    public function update(Request $request, Report $report): RedirectResponse
+    public function update(UpdateReportRequest $request, Report $report): RedirectResponse
     {
-        $validated = $request->validate([
-            'meeting_number' => ['required', 'integer'],
-            'report_date' => ['required', 'date'],
-            'materi' => ['required', 'string'],
-            'behavior' => ['required', 'string'],
-            'content' => ['required', 'string'],
-            'image' => ['nullable', 'image', 'max:5120'], // Max 5MB
-        ]);
+        $validated = $request->validated();
+
+        // Enforce ownership
+        if ($report->user_id !== auth()->id()) {
+            abort(403, 'Unauthorized action.');
+        }
 
         $imageUrl = $report->image_url;
         if ($request->hasFile('image')) {

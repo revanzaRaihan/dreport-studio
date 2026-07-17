@@ -17,7 +17,13 @@ class Schedule extends Model
         'start_time',
         'end_time',
         'label',
+        'user_id',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 
     /**
      * Students assigned to this schedule slot.

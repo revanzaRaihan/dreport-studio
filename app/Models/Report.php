@@ -21,7 +21,13 @@ class Report extends Model
         'behavior',
         'content',
         'image_url',
+        'user_id',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 
     protected $casts = [
         'report_date' => 'date',

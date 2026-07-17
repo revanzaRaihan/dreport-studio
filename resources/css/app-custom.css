@@ -29,9 +29,8 @@ body {
 }
 
 .app {
-    max-width: 960px;
-    margin: 0 auto;
-    padding: 28px 20px 80px;
+    padding-top: 0;
+    padding-bottom: 80px;
 }
 
 header.top {
@@ -118,9 +117,9 @@ nav.tabs a:not(.active):hover, nav.tabs button:not(.active):hover {
     background: var(--paper-raised);
     border: 1px solid var(--line);
     border-radius: var(--radius);
-    padding: 20px;
+    padding: 24px;
     box-shadow: var(--shadow);
-    margin-bottom: 16px;
+    margin-bottom: 24px;
 }
 
 .card h2 {

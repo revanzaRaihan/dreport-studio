@@ -14,5 +14,11 @@ class DatasetEntry extends Model
         'body',
         'language',
         'section_type',
+        'user_id',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

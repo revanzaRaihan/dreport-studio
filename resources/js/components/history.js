@@ -22,10 +22,10 @@ document.addEventListener('turbo:load', () => {
             let message = content;
             const encodedText = encodeURIComponent(message);
             
-            let waUrl = `whatsapp://send?text=${encodedText}`;
+            let waUrl = `https://wa.me/?text=${encodedText}`;
             if (adminWaNumber) {
                 const cleanPhone = adminWaNumber.replace(/\D/g, '');
-                waUrl = `whatsapp://send?phone=${cleanPhone}&text=${encodedText}`;
+                waUrl = `https://wa.me/${cleanPhone}?text=${encodedText}`;
             }
 
             window.open(waUrl, '_blank');

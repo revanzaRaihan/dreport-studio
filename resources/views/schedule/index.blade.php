@@ -6,7 +6,7 @@
 @section('content')
 <section class="panel active" id="tab-jadwal">
     <!-- Tambah Jadwal Card (Top Section) -->
-    <div class="card" style="padding: 24px; margin-bottom: 24px;">
+    <div class="card">
         <h2>Tambah Jadwal Sesi Les</h2>
         <p class="desc" style="margin-bottom: 20px;">Atur sesi pertemuan rutin mingguan Anda. Murid yang di-assign akan otomatis mendapatkan antrean laporan berkala setiap sesi selesai terlewati.</p>
         

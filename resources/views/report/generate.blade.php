@@ -20,7 +20,7 @@
         </div>
     @endif
 
-    <div class="card" style="padding: 24px;">
+    <div class="card">
         <h2 style="margin-bottom: 4px;">{{ __('Laporan baru') }}</h2>
         <p class="desc" style="margin-bottom: 20px;">{{ __('Pilih murid, isi materi & behavior. Tanggal dan nomor meeting terisi otomatis dari data tracking.') }}</p>
 
@@ -63,6 +63,19 @@
                         <option value="id" selected>{{ __('Bahasa Indonesia') }}</option>
                         <option value="en">{{ __('Bahasa Inggris') }}</option>
                     </select>
+                </div>
+
+                <div style="margin-top: 4px;">
+                    <label style="font-weight: 600; display: block; margin-bottom: 6px;">{{ __('Format Laporan') }}</label>
+                    <div style="display: flex; gap: 8px; background: #FCFAF6; border: 1.5px solid var(--line); padding: 4px; border-radius: 10px;">
+                        <button type="button" id="btnTypeFull" class="report-type-btn active" style="flex: 1; border: none; background: var(--teal); color: var(--paper); padding: 8px 12px; font-size: 13.5px; font-weight: 600; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
+                            {{ __('Full Report') }}
+                        </button>
+                        <button type="button" id="btnTypeOverview" class="report-type-btn" style="flex: 1; border: none; background: transparent; color: var(--muted); padding: 8px 12px; font-size: 13.5px; font-weight: 600; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
+                            {{ __('Overview') }}
+                        </button>
+                    </div>
+                    <input type="hidden" id="genReportType" value="full">
                 </div>
             </div>
 

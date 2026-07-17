@@ -15,8 +15,8 @@ class DatasetController extends Controller
      */
     public function index(): View
     {
-        $dataset = DatasetEntry::latest()->get();
-        $recommendationDataset = \App\Models\RecommendationDataset::latest()->get();
+        $dataset = DatasetEntry::where('user_id', auth()->id())->latest()->get();
+        $recommendationDataset = \App\Models\RecommendationDataset::where('user_id', auth()->id())->latest()->get();
         return view('dataset.index', compact('dataset', 'recommendationDataset'));
     }
 
@@ -29,13 +29,15 @@ class DatasetController extends Controller
             \App\Models\RecommendationDataset::create([
                 'category' => $validated['category'] ?? 'coding_dasar',
                 'body' => $validated['body'],
-                'language' => $validated['language']
+                'language' => $validated['language'],
+                'user_id' => auth()->id(),
             ]);
         } else {
             DatasetEntry::create([
                 'section_type' => $sectionType,
                 'body' => $validated['body'],
-                'language' => $validated['language']
+                'language' => $validated['language'],
+                'user_id' => auth()->id(),
             ]);
         }
 
@@ -55,8 +57,8 @@ class DatasetController extends Controller
                 ->with('error', 'Tidak ada contoh laporan yang dipilih.');
         }
 
-        $generalDeleted = DatasetEntry::whereIn('id', $ids)->delete();
-        $recDeleted = \App\Models\RecommendationDataset::whereIn('id', $ids)->delete();
+        $generalDeleted = DatasetEntry::where('user_id', auth()->id())->whereIn('id', $ids)->delete();
+        $recDeleted = \App\Models\RecommendationDataset::where('user_id', auth()->id())->whereIn('id', $ids)->delete();
         $totalDeleted = $generalDeleted + $recDeleted;
 
         return redirect()->route('dataset.index')
@@ -70,12 +72,12 @@ class DatasetController extends Controller
     {
         $deleted = false;
         
-        $entry = DatasetEntry::find($id);
+        $entry = DatasetEntry::where('user_id', auth()->id())->find($id);
         if ($entry) {
             $entry->delete();
             $deleted = true;
         } else {
-            $recEntry = \App\Models\RecommendationDataset::find($id);
+            $recEntry = \App\Models\RecommendationDataset::where('user_id', auth()->id())->find($id);
             if ($recEntry) {
                 $recEntry->delete();
                 $deleted = true;
@@ -84,7 +86,7 @@ class DatasetController extends Controller
 
         if (!$deleted) {
             return redirect()->route('dataset.index')
-                ->with('error', 'Contoh laporan tidak ditemukan.');
+                ->with('error', 'Contoh laporan tidak ditemukan atau tidak memiliki akses.');
         }
 
         return redirect()->route('dataset.index')

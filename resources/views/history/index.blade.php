@@ -45,6 +45,10 @@
                         <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap;">
                             <span class="badge" style="background: #F1ECE1; color: var(--ink); border: none; font-size: 11px;">{{ $student->subject }}</span>
                             <span style="font-size: 12.5px; color: var(--muted);">{{ $student->reports_count }} laporan tersimpan</span>
+                            @if($student->latest_report_date)
+                                <span style="font-size: 12.5px; color: var(--muted);">&bull;</span>
+                                <span style="font-size: 12.5px; color: var(--muted);">Terakhir: {{ \Carbon\Carbon::parse($student->latest_report_date)->format('d/m/Y') }}</span>
+                            @endif
                         </div>
                     </div>
                     <div style="flex-shrink: 0;">

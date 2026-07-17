@@ -147,14 +147,16 @@ class ReportGenerationFlowTest extends TestCase
         $entry1 = DatasetEntry::create([
             'body' => 'Contoh general dataset body',
             'language' => 'id',
-            'section_type' => 'overview'
+            'section_type' => 'overview',
+            'user_id' => $this->user->id
         ]);
 
         // Create Rec entry
         $entry2 = \App\Models\RecommendationDataset::create([
             'body' => 'Contoh recommendation dataset body',
             'language' => 'id',
-            'category' => 'coding_dasar'
+            'category' => 'coding_dasar',
+            'user_id' => $this->user->id
         ]);
 
         // 1. Delete batch with empty IDs
@@ -182,11 +184,13 @@ class ReportGenerationFlowTest extends TestCase
         $student = Student::create([
             'name' => 'Renziro',
             'subject' => 'Javascript Developer',
-            'meeting_count' => 5
+            'meeting_count' => 5,
+            'user_id' => $this->user->id
         ]);
 
         DatasetEntry::create([
-            'body' => 'Contoh laporan gaya penulisan les lama.'
+            'body' => 'Contoh laporan gaya penulisan les lama.',
+            'user_id' => $this->user->id
         ]);
 
         // Mock the AI Report Generator Interface
@@ -199,18 +203,19 @@ class ReportGenerationFlowTest extends TestCase
                  ->andReturn(new \App\DataTransferObjects\ReportSections(
                      'Renziro hari ini belajar database migrations dengan sangat baik.',
                      'Anak menunjukkan fokus tinggi dan kemajuan pesat dalam memahami konsep database.',
-                     'Untuk latihan di rumah, disarankan membuat relasi migration sederhana.',
-                     'Orang tua diimbau mendampingi Renziro saat mencoba membuat relasi table.'
+                     '1. Database Migration: https://studio.code.org',
+                     'Orang tua diimbau mendampingi Renziro saat mencoba membuat relasi table.',
+                     'Lesson 6'
                  ));
         });
 
-        $expectedText = "09/07/2026\n\n" .
-                        "Javascript Developer Meeting 6. Renziro Lesson 6\n\n" .
-                        "Renziro hari ini belajar database migrations dengan sangat baik.\n\n" .
-                        "-\n\n" .
+        $expectedText = "09/07/2026\n" .
+                        "Javascript Developer Meeting 6, Pada pertemuan kali ini, Renziro dapat menyelesaikan Lesson 6\n" .
+                        "Renziro hari ini belajar database migrations dengan sangat baik.\n" .
+                        "-\n" .
                         "Anak menunjukkan fokus tinggi dan kemajuan pesat dalam memahami konsep database.\n\n" .
-                        "Untuk latihan di rumah, disarankan membuat relasi migration sederhana.\n\n" .
-                        "Orang tua diimbau mendampingi Renziro saat mencoba membuat relasi table.";
+                        "Training Rec:\n1. Database Migration: https://studio.code.org\n\n" .
+                        "Orang tua diimbau mendampingi Renziro saat mencoba membuat relasi table. Renziro tidak perlu menyelesaikan latihan hingga akhir.";
 
         // 1. Generate Report JSON endpoint
         $response = $this->postJson('/reports/generate', [
@@ -263,6 +268,66 @@ class ReportGenerationFlowTest extends TestCase
     }
 
     /**
+     * Test Report Generation as Overview only.
+     */
+    public function test_report_generation_as_overview(): void
+    {
+        $this->actingAs($this->user);
+
+        // Setup student and reference dataset
+        $student = Student::create([
+            'name' => 'Renziro',
+            'subject' => 'Javascript Developer',
+            'meeting_count' => 5,
+            'user_id' => $this->user->id
+        ]);
+
+        DatasetEntry::create([
+            'body' => 'Contoh laporan gaya penulisan les lama.',
+            'user_id' => $this->user->id
+        ]);
+
+        // Mock the AI Report Generator Interface
+        $this->mock(AiReportGeneratorInterface::class, function ($mock) {
+            $mock->shouldReceive('classifyCategory')
+                 ->andReturn('logika_terstruktur');
+
+            $mock->shouldReceive('generate')
+                 ->once()
+                 ->andReturn(new \App\DataTransferObjects\ReportSections(
+                     'Renziro hari ini belajar database migrations dengan sangat baik.',
+                     'Anak menunjukkan fokus tinggi dan kemajuan pesat dalam memahami konsep database.',
+                     '1. Database Migration: https://studio.code.org',
+                     'Orang tua diimbau mendampingi Renziro saat mencoba membuat relasi table.',
+                     'Lesson 6'
+                 ));
+        });
+
+        // Overview format has date, completion line, and overview line only.
+        $expectedText = "09/07/2026\n" .
+                        "Javascript Developer Meeting 6, Pada pertemuan kali ini, Renziro dapat menyelesaikan Lesson 6\n" .
+                        "Renziro hari ini belajar database migrations dengan sangat baik.";
+
+        // Generate Report JSON endpoint with report_type = overview
+        $response = $this->postJson('/reports/generate', [
+            'student_id' => $student->id,
+            'report_date' => '2026-07-09',
+            'meeting_number' => 6,
+            'materi' => 'Database migrations',
+            'behavior' => 'Sangat memahami penjelasan dengan baik',
+            'report_type' => 'overview'
+        ]);
+
+        $response->assertOk();
+        $response->assertJson([
+            'success' => true,
+            'text' => $expectedText,
+            'student_id' => $student->id,
+            'meeting_number' => '6'
+        ]);
+    }
+
+    /**
      * Test Pending Report CRUD lifecycle.
      */
     public function test_pending_report_crud_lifecycle(): void
@@ -272,7 +337,8 @@ class ReportGenerationFlowTest extends TestCase
         $student = Student::create([
             'name' => 'Adit',
             'subject' => 'Fisika Dasar',
-            'meeting_count' => 2
+            'meeting_count' => 2,
+            'user_id' => $this->user->id
         ]);
 
         // 1. Create Pending Report
@@ -325,7 +391,8 @@ class ReportGenerationFlowTest extends TestCase
         $student = Student::create([
             'name' => 'Budi Batch',
             'subject' => 'Kimia',
-            'meeting_count' => 0
+            'meeting_count' => 0,
+            'user_id' => $this->user->id
         ]);
 
         $pending1 = \App\Models\PendingReport::create([
@@ -364,7 +431,8 @@ class ReportGenerationFlowTest extends TestCase
         $student = Student::create([
             'name' => 'Adit',
             'subject' => 'Fisika Dasar',
-            'meeting_count' => 2
+            'meeting_count' => 2,
+            'user_id' => $this->user->id
         ]);
 
         $pending = \App\Models\PendingReport::create([
@@ -413,7 +481,8 @@ class ReportGenerationFlowTest extends TestCase
         $student = Student::create([
             'name' => 'Renziro',
             'subject' => 'Javascript Developer',
-            'meeting_count' => 5
+            'meeting_count' => 5,
+            'user_id' => $this->user->id
         ]);
 
         // Fake the public storage disk
@@ -454,7 +523,8 @@ class ReportGenerationFlowTest extends TestCase
         $student = Student::create([
             'name' => 'Renziro',
             'subject' => 'Javascript Developer',
-            'meeting_count' => 5
+            'meeting_count' => 5,
+            'user_id' => $this->user->id
         ]);
 
         $report = Report::create([
@@ -465,7 +535,8 @@ class ReportGenerationFlowTest extends TestCase
             'report_date' => '2026-07-09',
             'materi' => 'Initial Lesson',
             'behavior' => 'Sangat bagus',
-            'content' => 'Konten awal.'
+            'content' => 'Konten awal.',
+            'user_id' => $this->user->id
         ]);
 
         // Fake storage
@@ -507,7 +578,8 @@ class ReportGenerationFlowTest extends TestCase
         $student = Student::create([
             'name' => 'Azzam Sched',
             'subject' => 'Fisika',
-            'meeting_count' => 0
+            'meeting_count' => 0,
+            'user_id' => $this->user->id
         ]);
 
         // 1. Create Schedule
@@ -567,7 +639,8 @@ class ReportGenerationFlowTest extends TestCase
         $student = Student::create([
             'name' => 'Azzam Sched Auto',
             'subject' => 'Kimia',
-            'meeting_count' => 2
+            'meeting_count' => 2,
+            'user_id' => $this->user->id
         ]);
 
         // Create weekly schedule slot for Wednesday (3)
@@ -575,7 +648,8 @@ class ReportGenerationFlowTest extends TestCase
             'day_of_week' => 3,
             'start_time' => '14:00',
             'end_time' => '15:30',
-            'label' => 'Lab Kimia'
+            'label' => 'Lab Kimia',
+            'user_id' => $this->user->id
         ]);
 
         $schedule->students()->attach($student->id);
@@ -586,6 +660,7 @@ class ReportGenerationFlowTest extends TestCase
 
         // Create one past report manually to establish reference history (Wednesday July 1, 2026 - Meeting 2)
         Report::create([
+            'user_id' => $this->user->id,
             'student_id' => $student->id,
             'student_name' => $student->name,
             'subject' => $student->subject,
@@ -625,7 +700,8 @@ class ReportGenerationFlowTest extends TestCase
             'name' => 'Azzam First Date',
             'subject' => 'Fisika',
             'meeting_count' => 0,
-            'first_meeting_date' => '2026-07-01' // Wednesday
+            'first_meeting_date' => '2026-07-01', // Wednesday
+            'user_id' => $this->user->id
         ]);
 
         // Create weekly schedule slot for Wednesday (3)
@@ -633,7 +709,8 @@ class ReportGenerationFlowTest extends TestCase
             'day_of_week' => 3,
             'start_time' => '14:00',
             'end_time' => '15:30',
-            'label' => 'Lab Fisika'
+            'label' => 'Lab Fisika',
+            'user_id' => $this->user->id
         ]);
 
         $schedule->students()->attach($student->id);
@@ -722,13 +799,15 @@ class ReportGenerationFlowTest extends TestCase
         $student = Student::create([
             'name' => 'Azzam Lang Test',
             'subject' => 'Fisika',
-            'meeting_count' => 0
+            'meeting_count' => 0,
+            'user_id' => $this->user->id
         ]);
 
         // Scenario A: Requesting 'en' report without English dataset
         DatasetEntry::create([
             'body' => 'Contoh Indonesia saja',
-            'language' => 'id'
+            'language' => 'id',
+            'user_id' => $this->user->id
         ]);
 
         $response = $this->postJson('/reports/generate', [
@@ -779,5 +858,65 @@ class ReportGenerationFlowTest extends TestCase
             'language' => 'id',
             'category' => 'kreativitas'
         ]);
+    }
+
+    /**
+     * Test that the history index page sorts students by their most recent report date.
+     */
+    public function test_history_index_sorted_by_recent_reports(): void
+    {
+        $this->actingAs($this->user);
+
+        // Create student A with an older report (5 days ago)
+        $studentA = Student::create([
+            'name' => 'Student A',
+            'subject' => 'Math',
+            'meeting_count' => 1,
+            'user_id' => $this->user->id
+        ]);
+        Report::create([
+            'student_id' => $studentA->id,
+            'student_name' => $studentA->name,
+            'subject' => $studentA->subject,
+            'meeting_number' => 1,
+            'report_date' => now()->subDays(5)->format('Y-m-d'),
+            'materi' => 'Intro Math',
+            'behavior' => 'Good',
+            'content' => 'First Math Report',
+            'created_at' => now()->subDays(5),
+            'user_id' => $this->user->id
+        ]);
+
+        // Create student B with a newer report (today)
+        $studentB = Student::create([
+            'name' => 'Student B',
+            'subject' => 'English',
+            'meeting_count' => 1,
+            'user_id' => $this->user->id
+        ]);
+        Report::create([
+            'student_id' => $studentB->id,
+            'student_name' => $studentB->name,
+            'subject' => $studentB->subject,
+            'meeting_number' => 1,
+            'report_date' => now()->format('Y-m-d'),
+            'materi' => 'Intro English',
+            'behavior' => 'Excellent',
+            'content' => 'First English Report',
+            'created_at' => now(),
+            'user_id' => $this->user->id
+        ]);
+
+        // Access history page
+        $response = $this->get('/history');
+
+        $response->assertStatus(200);
+
+        // Verify Student B appears before Student A in the returned view data
+        $students = $response->viewData('studentsWithReports');
+        $this->assertGreaterThan(0, $students->count());
+
+        $firstStudent = $students->first();
+        $this->assertEquals($studentB->id, $firstStudent->id);
     }
 }

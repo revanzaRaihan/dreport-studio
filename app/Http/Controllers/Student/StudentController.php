@@ -17,7 +17,8 @@ class StudentController extends Controller
     public function index(\Illuminate\Http\Request $request): View
     {
         $search   = $request->query('search');
-        $students = Student::orderBy('name')
+        $students = Student::where('user_id', auth()->id())
+            ->orderBy('name')
             ->when($search, fn($q) => $q->where(function ($q) use ($search) {
                 $q->where('name', 'ilike', "%{$search}%")
                   ->orWhere('subject', 'ilike', "%{$search}%");
@@ -25,8 +26,9 @@ class StudentController extends Controller
             ->paginate(1000)
             ->withQueryString();
 
-        // Distinct subjects for the subject combobox (includes soft-deleted rows so history is preserved)
+        // Distinct subjects for the subject combobox (includes soft-deleted rows, scoped to user)
         $subjects = Student::withTrashed()
+            ->where('user_id', auth()->id())
             ->whereNotNull('subject')
             ->where('subject', '!=', '')
             ->distinct()
@@ -41,7 +43,10 @@ class StudentController extends Controller
      */
     public function store(StoreStudentRequest $request): RedirectResponse
     {
-        Student::create($request->validated());
+        $validated = $request->validated();
+        $validated['user_id'] = auth()->id();
+        
+        Student::create($validated);
 
         return redirect()->route('students.index')
             ->with('success', 'Murid berhasil ditambahkan.');
@@ -52,6 +57,10 @@ class StudentController extends Controller
      */
     public function update(UpdateStudentRequest $request, Student $student): RedirectResponse
     {
+        if ($student->user_id !== auth()->id()) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $student->update($request->validated());
 
         return redirect()->route('students.index')
@@ -63,6 +72,10 @@ class StudentController extends Controller
      */
     public function destroy(Student $student): RedirectResponse
     {
+        if ($student->user_id !== auth()->id()) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $student->delete();
 
         return redirect()->route('students.index')

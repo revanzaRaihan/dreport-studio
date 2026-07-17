@@ -10,7 +10,7 @@ use App\Http\Controllers\Settings\SettingsController;
 Route::middleware(['auth'])->group(function () {
     // Report Generator
     Route::get('/', [ReportController::class, 'index'])->name('report.index');
-    Route::post('/reports/generate', [ReportController::class, 'generate'])->name('report.generate');
+    Route::post('/reports/generate', [ReportController::class, 'generate'])->name('report.generate')->middleware('throttle:10,1');
     Route::post('/reports', [ReportController::class, 'store'])->name('report.store');
     Route::put('/reports/{report}', [ReportController::class, 'update'])->name('report.update');
 

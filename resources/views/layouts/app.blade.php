@@ -259,7 +259,7 @@
 
 </head>
 <body>
-<div class="app">
+<div class="app container mx-auto px-4 md:px-6 max-w-5xl py-8">
 
     <header class="top">
         <div class="brand">

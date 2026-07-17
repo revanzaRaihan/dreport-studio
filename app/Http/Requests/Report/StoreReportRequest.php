@@ -3,8 +3,9 @@
 namespace App\Http\Requests\Report;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
-class GenerateReportRequest extends FormRequest
+class StoreReportRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -15,18 +16,19 @@ class GenerateReportRequest extends FormRequest
     {
         return [
             'student_id' => [
-                'required',
-                'uuid',
-                \Illuminate\Validation\Rule::exists('students', 'id')->where(function ($query) {
+                'required', 
+                'uuid', 
+                Rule::exists('students', 'id')->where(function ($query) {
                     $query->where('user_id', auth()->id())->whereNull('deleted_at');
                 })
             ],
-            'report_date' => ['required', 'date'],
             'meeting_number' => ['required', 'integer', 'min:1'],
+            'report_date' => ['required', 'date'],
             'materi' => ['required', 'string', 'max:1000'],
             'behavior' => ['required', 'string', 'max:1000'],
-            'language' => ['nullable', 'string', 'in:id,en'],
-            'report_type' => ['nullable', 'string', 'in:overview,full'],
+            'content' => ['required', 'string'],
+            'pending_report_id' => ['nullable', 'uuid', 'exists:pending_reports,id'],
+            'image' => ['nullable', 'image', 'max:5120'], // Max 5MB
         ];
     }
 }
